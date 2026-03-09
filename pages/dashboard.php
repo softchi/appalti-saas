@@ -61,7 +61,7 @@ include COMPONENTS_PATH . '/sidebar.php';
       <div class="card h-100">
         <div class="card-header d-flex align-items-center justify-content-between">
           <span><i class="bi bi-briefcase me-2 text-primary"></i>Commesse in corso</span>
-          <a href="<?= APP_URL ?>/pages/pm_commesse.php" class="btn btn-sm btn-outline-primary">
+          <a href="<?= APP_URL ?>/pages/commesse.php" class="btn btn-sm btn-outline-primary">
             Tutte <i class="bi bi-arrow-right ms-1"></i>
           </a>
         </div>
@@ -110,7 +110,7 @@ include COMPONENTS_PATH . '/sidebar.php';
       <div class="card h-100">
         <div class="card-header d-flex align-items-center justify-content-between">
           <span><i class="bi bi-alarm me-2 text-danger"></i>Scadenze prossime</span>
-          <a href="<?= APP_URL ?>/pages/pm_scadenze.php" class="btn btn-sm btn-outline-danger btn-sm">
+          <a href="<?= APP_URL ?>/pages/scadenze.php" class="btn btn-sm btn-outline-danger btn-sm">
             Tutte
           </a>
         </div>
@@ -202,7 +202,7 @@ function renderKpi(kpi) {
       label: 'Commesse Totali',
       value: c.totale || 0,
       sub:   `${c.in_esecuzione || 0} in esecuzione`,
-      link:  '/pages/pm_commesse.php',
+      link:  '/pages/commesse.php',
     },
     {
       cls:   'kpi-warning',
@@ -218,7 +218,7 @@ function renderKpi(kpi) {
       label: 'SAL da Approvare',
       value: kpi.sal_da_approvare || 0,
       sub:   'In attesa di approvazione',
-      link:  '/pages/pm_sal.php',
+      link:  '/pages/sal.php',
     },
     {
       cls:   'kpi-danger',
@@ -226,7 +226,7 @@ function renderKpi(kpi) {
       label: 'Scadenze Scadute',
       value: kpi.scadenze_scadute || 0,
       sub:   'Richiedono azione urgente',
-      link:  '/pages/pm_scadenze.php',
+      link:  '/pages/scadenze.php',
     },
     {
       cls:   'kpi-purple',

@@ -12,7 +12,7 @@ if (!Auth::can('pm_commesse.read')) {
 
 $commessaId = sanitizeInt($_GET['id'] ?? null, 1);
 if (!$commessaId) {
-    header('Location: ' . APP_URL . '/pages/pm_commesse.php');
+    header('Location: ' . APP_URL . '/pages/commesse.php');
     exit;
 }
 
@@ -29,7 +29,7 @@ $commessa = Database::fetchOne(
 );
 
 if (!$commessa) {
-    header('Location: ' . APP_URL . '/pages/pm_commesse.php');
+    header('Location: ' . APP_URL . '/pages/commesse.php');
     exit;
 }
 
@@ -48,7 +48,7 @@ include __DIR__ . '/../components/sidebar.php';
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb mb-1 small">
           <li class="breadcrumb-item"><a href="<?= APP_URL ?>/pages/dashboard.php">Dashboard</a></li>
-          <li class="breadcrumb-item"><a href="<?= APP_URL ?>/pages/pm_commesse.php">Commesse</a></li>
+          <li class="breadcrumb-item"><a href="<?= APP_URL ?>/pages/commesse.php">Commesse</a></li>
           <li class="breadcrumb-item active"><?= e($commessa['codice_commessa']) ?></li>
         </ol>
       </nav>
@@ -74,11 +74,11 @@ include __DIR__ . '/../components/sidebar.php';
          class="btn btn-outline-primary btn-sm">
         <i class="bi bi-bar-chart-steps me-1"></i>Cronoprogramma
       </a>
-      <a href="<?= APP_URL ?>/pages/pm_sal.php?commessa_id=<?= $commessaId ?>"
+      <a href="<?= APP_URL ?>/pages/sal.php?commessa_id=<?= $commessaId ?>"
          class="btn btn-outline-success btn-sm">
         <i class="bi bi-receipt-cutoff me-1"></i>SAL
       </a>
-      <a href="<?= APP_URL ?>/pages/pm_documenti.php?commessa_id=<?= $commessaId ?>"
+      <a href="<?= APP_URL ?>/pages/documenti.php?commessa_id=<?= $commessaId ?>"
          class="btn btn-outline-info btn-sm">
         <i class="bi bi-folder2-open me-1"></i>Documenti
       </a>
@@ -284,7 +284,7 @@ include __DIR__ . '/../components/sidebar.php';
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-white fw-semibold border-bottom-0 pb-0 d-flex justify-content-between">
               Prossime Scadenze
-              <a href="<?= APP_URL ?>/pages/pm_scadenze.php?commessa_id=<?= $commessaId ?>"
+              <a href="<?= APP_URL ?>/pages/scadenze.php?commessa_id=<?= $commessaId ?>"
                  class="btn btn-link btn-sm p-0 small">Vedi tutte</a>
             </div>
             <div class="card-body p-0">
@@ -348,7 +348,7 @@ include __DIR__ . '/../components/sidebar.php';
     <div class="tab-pane fade" id="tabSal">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="mb-0 fw-semibold">Stato Avanzamento Lavori</h6>
-        <a href="<?= APP_URL ?>/pages/pm_sal.php?commessa_id=<?= $commessaId ?>"
+        <a href="<?= APP_URL ?>/pages/sal.php?commessa_id=<?= $commessaId ?>"
            class="btn btn-success btn-sm">
           <i class="bi bi-receipt-cutoff me-1"></i>Gestisci SAL
         </a>
@@ -383,7 +383,7 @@ include __DIR__ . '/../components/sidebar.php';
     <div class="tab-pane fade" id="tabScadenze">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="mb-0 fw-semibold">Scadenze</h6>
-        <a href="<?= APP_URL ?>/pages/pm_scadenze.php?commessa_id=<?= $commessaId ?>"
+        <a href="<?= APP_URL ?>/pages/scadenze.php?commessa_id=<?= $commessaId ?>"
            class="btn btn-outline-primary btn-sm">
           <i class="bi bi-calendar-plus me-1"></i>Gestisci Scadenze
         </a>
@@ -426,7 +426,7 @@ include __DIR__ . '/../components/sidebar.php';
     <div class="tab-pane fade" id="tabDocs">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="mb-0 fw-semibold">Ultimi pm_documenti</h6>
-        <a href="<?= APP_URL ?>/pages/pm_documenti.php?commessa_id=<?= $commessaId ?>"
+        <a href="<?= APP_URL ?>/pages/documenti.php?commessa_id=<?= $commessaId ?>"
            class="btn btn-outline-primary btn-sm">
           <i class="bi bi-folder2-open me-1"></i>Archivio Completo
         </a>

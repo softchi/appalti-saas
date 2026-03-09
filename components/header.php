@@ -88,7 +88,7 @@ $scadenzeUrgenti = (int)Database::fetchValue(
 
       <!-- Scadenze urgenti -->
       <?php if ($scadenzeUrgenti > 0): ?>
-      <a href="<?= APP_URL ?>/pages/pm_scadenze.php"
+      <a href="<?= APP_URL ?>/pages/scadenze.php"
          class="btn btn-sm btn-warning position-relative me-1" title="Scadenze urgenti">
         <i class="bi bi-alarm"></i>
         <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle">

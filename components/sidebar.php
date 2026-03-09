@@ -14,7 +14,7 @@ $menuItems = [
     ['type' => 'divider', 'label' => 'APPALTI & COMMESSE'],
 
     ['id' => 'pm_commesse', 'icon' => 'bi-briefcase-fill', 'label' => 'Commesse',
-     'url' => APP_URL . '/pages/pm_commesse.php', 'perm' => 'pm_commesse.read',
+     'url' => APP_URL . '/pages/commesse.php', 'perm' => 'pm_commesse.read',
      'badge_query' => "SELECT COUNT(*) FROM pm_commesse WHERE stato = 'IN_ESECUZIONE'"],
 
     ['id' => 'cronoprogramma', 'icon' => 'bi-bar-chart-steps', 'label' => 'Cronoprogramma',
@@ -23,7 +23,7 @@ $menuItems = [
     ['type' => 'divider', 'label' => 'CONTABILITÀ'],
 
     ['id' => 'pm_sal', 'icon' => 'bi-receipt-cutoff', 'label' => 'S.A.L.',
-     'url' => APP_URL . '/pages/pm_sal.php', 'perm' => 'pm_sal.read'],
+     'url' => APP_URL . '/pages/sal.php', 'perm' => 'pm_sal.read'],
 
     ['id' => 'contabilita', 'icon' => 'bi-currency-euro', 'label' => 'Contabilità Lavori',
      'url' => APP_URL . '/pages/contabilita.php', 'perm' => 'pm_sal.read'],
@@ -31,15 +31,15 @@ $menuItems = [
     ['type' => 'divider', 'label' => 'DOCUMENTI & VERBALI'],
 
     ['id' => 'pm_documenti', 'icon' => 'bi-folder2-open', 'label' => 'Documentale',
-     'url' => APP_URL . '/pages/pm_documenti.php', 'perm' => 'pm_documenti.read'],
+     'url' => APP_URL . '/pages/documenti.php', 'perm' => 'pm_documenti.read'],
 
     ['id' => 'pm_verbali', 'icon' => 'bi-journal-check', 'label' => 'Verbali',
-     'url' => APP_URL . '/pages/pm_verbali.php', 'perm' => 'pm_verbali.read'],
+     'url' => APP_URL . '/pages/verbali.php', 'perm' => 'pm_verbali.read'],
 
     ['type' => 'divider', 'label' => 'PIANIFICAZIONE'],
 
     ['id' => 'pm_scadenze', 'icon' => 'bi-calendar-event-fill', 'label' => 'Scadenzario',
-     'url' => APP_URL . '/pages/pm_scadenze.php', 'perm' => 'pm_scadenze.read',
+     'url' => APP_URL . '/pages/scadenze.php', 'perm' => 'pm_scadenze.read',
      'badge_query' => "SELECT COUNT(*) FROM pm_scadenze WHERE stato = 'ATTIVA' AND data_scadenza < CURDATE()",
      'badge_class' => 'bg-danger'],
 
@@ -54,7 +54,7 @@ $menuItems = [
     ['type' => 'divider', 'label' => 'AMMINISTRAZIONE', 'only_roles' => ['SUPERADMIN','ADMIN','RUP']],
 
     ['id' => 'pm_utenti', 'icon' => 'bi-people-fill', 'label' => 'Utenti',
-     'url' => APP_URL . '/pages/pm_utenti.php', 'perm' => 'pm_utenti.read',
+     'url' => APP_URL . '/pages/utenti.php', 'perm' => 'pm_utenti.read',
      'only_roles' => ['SUPERADMIN','ADMIN']],
 
     ['id' => 'impostazioni', 'icon' => 'bi-gear-fill', 'label' => 'Impostazioni',

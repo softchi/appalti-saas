@@ -294,8 +294,8 @@ include __DIR__ . '/../components/sidebar.php';
 
 <?php
 $commessaIdFilter = sanitizeInt($_GET['commessa_id'] ?? null, 1);
-$inlineScript = <<<JS
-let _commessaId = {$commessaIdFilter};
+$inlineScript = <<<'JS'
+let _commessaId = __COMMESSA_ID__;
 let _costiData  = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -556,4 +556,5 @@ async function salvaVariante() {
     } finally { UI.hideLoader(); }
 }
 JS;
+$inlineScript = str_replace('__COMMESSA_ID__', (int)$commessaIdFilter, $inlineScript);
 include __DIR__ . '/../components/footer.php';
