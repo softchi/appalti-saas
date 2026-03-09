@@ -138,16 +138,16 @@ function listImprese(): void {
     $params = [];
     $where  = ['1=1'];
     if ($search) {
-        $where[] = '(denominazione LIKE :s OR partita_iva LIKE :s2 OR codice_fiscale LIKE :s3)';
+        $where[] = '(ragione_sociale LIKE :s OR partita_iva LIKE :s2 OR codice_fiscale LIKE :s3)';
         $params[':s'] = $params[':s2'] = $params[':s3'] = '%' . $search . '%';
     }
     $rows = Database::fetchAll(
-        'SELECT id, denominazione, partita_iva, codice_fiscale, indirizzo, comune,
-                provincia, categoria_soa, classifica_soa, email, pec, telefono, referente
-         FROM pm_imprese WHERE ' . implode(' AND ', $where) . ' ORDER BY denominazione',
+        'SELECT id, ragione_sociale AS denominazione, partita_iva, codice_fiscale,
+                indirizzo, citta, provincia, soa_categorie, email, pec, telefono
+         FROM pm_imprese WHERE ' . implode(' AND ', $where) . ' ORDER BY ragione_sociale',
         $params
     );
-    jsonSuccess($rows);
+    jsonResponse(['data' => $rows]);
 }
 
 function getImpresa(int $id): void {

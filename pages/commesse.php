@@ -451,17 +451,17 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadSelectOptions() {
     try {
         // Stazioni appaltanti
-        const resSA = await API.get('/api/pm_appalti.php?action=stazioni');
-        if (resSA.data) {
+        const resSA = await API.get('/api/appalti.php?action=stazioni');
+        if (resSA.stazioni) {
             const selSA = document.getElementById('fStazioneAppaltante');
             const filterSA = document.getElementById('filterSA');
-            resSA.data.forEach(sa => {
+            resSA.stazioni.forEach(sa => {
                 selSA.insertAdjacentHTML('beforeend', `<option value="${sa.id}">${escapeHtml(sa.denominazione)}</option>`);
                 filterSA.insertAdjacentHTML('beforeend', `<option value="${sa.id}">${escapeHtml(sa.denominazione)}</option>`);
             });
         }
         // Imprese
-        const resImp = await API.get('/api/pm_appalti.php?action=pm_imprese');
+        const resImp = await API.get('/api/appalti.php?action=pm_imprese');
         if (resImp.data) {
             const selImp = document.getElementById('fImpresa');
             resImp.data.forEach(i => {
@@ -469,7 +469,7 @@ async function loadSelectOptions() {
             });
         }
         // Utenti
-        const resU = await API.get('/api/pm_utenti.php?per_page=200');
+        const resU = await API.get('/api/utenti.php?per_page=200');
         if (resU.data) {
             allUtenti = resU.data;
             ['fRup','fPm','fDl','fCse'].forEach(id => {
@@ -497,21 +497,20 @@ async function loadCommesse(page = 1) {
 
     const params = new URLSearchParams({
         page, per_page: 15,
-        ...(search && { search }),
+        ...(search && { q: search }),
         ...(stato  && { stato }),
-        ...(saId   && { stazione_appaltante_id: saId }),
-        sort_by: sort,
+        ...(saId   && { sa_id: saId }),
     });
 
     try {
-        const res = await API.get('/api/pm_commesse.php?' + params.toString());
-        renderKpi(res.meta || {});
+        const res = await API.get('/api/commesse.php?' + params.toString());
         if (currentView === 'table') renderTable(res.data || []);
         else renderGrid(res.data || []);
-        renderPagination(res.meta?.current_page || 1, res.meta?.last_page || 1,
-            'paginazione', loadCommesse);
+        renderPagination(res.page || 1, res.pages || 1, 'paginazione', loadCommesse);
+        const _from = (res.total ?? 0) > 0 ? ((res.page - 1) * res.perPage + 1) : 0;
+        const _to   = Math.min(res.page * res.perPage, res.total ?? 0);
         document.getElementById('paginationInfo').textContent =
-            `${res.meta?.from ?? 0}–${res.meta?.to ?? 0} di ${res.meta?.total ?? 0} pm_commesse`;
+            `${_from}–${_to} di ${res.total ?? 0} commesse`;
     } catch(e) {
         document.getElementById('commesseBody').innerHTML =
             `<tr><td colspan="9" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-2"></i>${escapeHtml(e.message)}</td></tr>`;
@@ -559,7 +558,7 @@ function renderTable(data) {
                 </div>
                 <small class="text-muted">${escapeHtml(c.stazione_appaltante ?? '')}</small>
             </td>
-            <td class="d-none d-xl-table-cell font-monospace small">${escapeHtml(c.cig ?? '—')}</td>
+            <td class="d-none d-xl-table-cell font-monospace small">${escapeHtml(c.codice_cig ?? '—')}</td>
             <td class="fw-semibold">${Format.euro(c.importo_contrattuale)}</td>
             <td style="min-width:120px">
                 <div class="d-flex align-items-center gap-2">
@@ -575,7 +574,7 @@ function renderTable(data) {
                 ${c.data_fine_prevista ? Format.date(c.data_fine_prevista) : '—'}
             </td>
             <td class="d-none d-md-table-cell small text-muted">
-                ${escapeHtml(c.rup_nominativo ?? '—')}
+                ${escapeHtml(c.rup_nome ?? '—')}
             </td>
             <td class="text-end pe-3">
                 <div class="btn-group btn-group-sm">
@@ -722,7 +721,7 @@ async function openEdit(id) {
     modal.show();
 
     try {
-        const res = await API.get(`/api/pm_commesse.php?id=${id}`);
+        const res = await API.get(`/api/commesse.php?id=${id}`);
         const c = res.data;
         document.getElementById('commessaId').value = c.id;
         const fields = ['oggetto','cig','cup','data_consegna','data_fine_prevista','stato','note',
@@ -761,10 +760,10 @@ async function saveCommessa() {
     UI.showLoader();
     try {
         if (data.id) {
-            await API.put('/api/pm_commesse.php', data);
+            await API.put('/api/commesse.php', data);
             UI.success('Commessa aggiornata con successo');
         } else {
-            await API.post('/api/pm_commesse.php', data);
+            await API.post('/api/commesse.php', data);
             UI.success('Commessa creata con successo');
         }
         bootstrap.Modal.getInstance(document.getElementById('commessaModal')).hide();
@@ -786,7 +785,7 @@ async function deleteCommessa(id, codice) {
 
     UI.showLoader();
     try {
-        await API.delete('/api/pm_commesse.php', { id });
+        await API.delete('/api/commesse.php', { id });
         UI.success('Commessa eliminata');
         loadCommesse(currentPage);
     } catch(e) {
