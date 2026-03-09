@@ -30,16 +30,28 @@ define('COMPONENTS_PATH', BASE_PATH . '/components');
 define('UPLOADS_PATH',    BASE_PATH . '/uploads');
 define('UPLOADS_URL',     APP_URL . '/uploads');
 // =============================================================================
+// CREDENZIALI LOCALI (file da creare manualmente su Altervista, NON in git)
+// Crea php/local_config.php con:
+//   <?php
+//   define('DB_USER_LOCAL', 'tuo_username_altervista');
+//   define('DB_PASS_LOCAL', 'tua_password_db');
+// =============================================================================
+$_localCfg = __DIR__ . '/local_config.php';
+if (file_exists($_localCfg)) {
+    require_once $_localCfg;
+}
+unset($_localCfg);
+// =============================================================================
 // DATABASE
 // FIX: rimosso define('DB_OPTIONS', [...]) con costanti PDO dentro define()
 //      causa errore 500 su Altervista. Le opzioni PDO ora sono in db.php
 //      come array normale al momento della connessione.
 // =============================================================================
-define('DB_HOST',    getenv('DB_HOST') ?: 'localhost');
-define('DB_PORT',    (int)(getenv('DB_PORT') ?: 3306));
-define('DB_NAME',    getenv('DB_NAME') ?: 'my_softchi');
-define('DB_USER',    getenv('DB_USER') ?: 'root');
-define('DB_PASS',    getenv('DB_PASS') ?: '');
+define('DB_HOST',    (defined('DB_HOST_LOCAL') ? DB_HOST_LOCAL : null) ?? getenv('DB_HOST') ?: 'localhost');
+define('DB_PORT',    (int)((defined('DB_PORT_LOCAL') ? DB_PORT_LOCAL : null) ?? getenv('DB_PORT') ?: 3306));
+define('DB_NAME',    (defined('DB_NAME_LOCAL') ? DB_NAME_LOCAL : null) ?? getenv('DB_NAME') ?: 'my_softchi');
+define('DB_USER',    (defined('DB_USER_LOCAL') ? DB_USER_LOCAL : null) ?? getenv('DB_USER') ?: 'softchi');
+define('DB_PASS',    (defined('DB_PASS_LOCAL') ? DB_PASS_LOCAL : null) ?? getenv('DB_PASS') ?: '');
 define('DB_CHARSET', 'utf8mb4');
 // NOTA: le DB_OPTIONS sono definite direttamente in db.php
 // =============================================================================

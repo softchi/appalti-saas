@@ -328,7 +328,10 @@ class Logger
     private static function getLogFile(): string
     {
         if (!self::$logFile) {
-            if (!is_dir(LOG_PATH)) mkdir(LOG_PATH, 0755, true);
+            // ALTERVISTA FIX: usa @ per sopprimere warning da mkdir()
+            // Se mkdir fallisce (permessi), il Logger tace invece di
+            // lanciare un'eccezione DENTRO set_exception_handler (fatal).
+            if (!is_dir(LOG_PATH)) @mkdir(LOG_PATH, 0755, true);
             self::$logFile = LOG_PATH . '/app_' . date('Y-m') . '.log';
         }
         return self::$logFile;
@@ -350,10 +353,12 @@ class Logger
             $contextStr
         );
         $logFile = self::getLogFile();
-        if (file_exists($logFile) && filesize($logFile) > LOG_MAX_SIZE) {
-            rename($logFile, $logFile . '.' . date('His') . '.bak');
+        if (is_dir(LOG_PATH) && is_writable(LOG_PATH)) {
+            if (file_exists($logFile) && filesize($logFile) > LOG_MAX_SIZE) {
+                @rename($logFile, $logFile . '.' . date('His') . '.bak');
+            }
+            @file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
         }
-        file_put_contents($logFile, $line, FILE_APPEND | LOCK_EX);
     }
     public static function debug(string $msg, array $ctx = []): void   { self::log('DEBUG',   $msg, $ctx); }
     public static function info(string $msg, array $ctx = []): void    { self::log('INFO',    $msg, $ctx); }
