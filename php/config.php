@@ -26,17 +26,26 @@ $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
          || (int)($_SERVER['SERVER_PORT'] ?? 80) === 443
     ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-// ALTERVISTA FIX: non usare dirname(SCRIPT_NAME) perché varia in base allo
-// script chiamato (es. api/login.php → base = /…/api invece di /…/).
-// Calcoliamo il percorso web dell'app sottraendo DOCUMENT_ROOT dal path
-// fisico dell'app (dirname(__DIR__) è sempre la root dell'app da config.php).
-$_docRoot = rtrim(str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? ''), '/');
-$_appRoot = rtrim(str_replace('\\', '/', dirname(__DIR__)), '/');
-$basePath = ($_docRoot !== '' && str_starts_with($_appRoot, $_docRoot))
-    ? substr($_appRoot, strlen($_docRoot))
-    : rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
-unset($_docRoot, $_appRoot);
-define('APP_URL',         $protocol . '://' . $host . $basePath);
+// APP_URL: può essere forzato in local_config.php con APP_URL_LOCAL (consigliato
+// su hosting condiviso dove DOCUMENT_ROOT o SCRIPT_NAME possono essere ambigui).
+// Altrimenti si calcola sottraendo DOCUMENT_ROOT dal path fisico dell'app.
+if (defined('APP_URL_LOCAL')) {
+    $basePath = rtrim(APP_URL_LOCAL, '/');
+    // Se APP_URL_LOCAL è un URL completo usalo direttamente, altrimenti aggiungi host
+    if (str_starts_with($basePath, 'http')) {
+        define('APP_URL', $basePath);
+    } else {
+        define('APP_URL', $protocol . '://' . $host . $basePath);
+    }
+} else {
+    $_docRoot = rtrim(str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? ''), '/');
+    $_appRoot = rtrim(str_replace('\\', '/', dirname(__DIR__)), '/');
+    $basePath = ($_docRoot !== '' && str_starts_with($_appRoot, $_docRoot))
+        ? substr($_appRoot, strlen($_docRoot))
+        : '/' . trim(dirname($_SERVER['SCRIPT_NAME'] ?? '/'), '/');
+    unset($_docRoot, $_appRoot);
+    define('APP_URL', $protocol . '://' . $host . $basePath);
+}
 define('BASE_PATH',       dirname(__DIR__));
 define('PHP_PATH',        BASE_PATH . '/php');
 define('API_PATH',        BASE_PATH . '/api');
