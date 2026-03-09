@@ -13,11 +13,11 @@ SET CHARACTER SET utf8mb4;
 -- -----------------------------------------------------------------------------
 -- DATABASE
 -- -----------------------------------------------------------------------------
-CREATE DATABASE IF NOT EXISTS `appalti_saas`
+CREATE DATABASE IF NOT EXISTS `my_softchi`
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE `appalti_saas`;
+USE `my_softchi`;
 
 -- =============================================================================
 -- SEZIONE 1: SISTEMA UTENTI, RUOLI, PERMESSI

@@ -40,7 +40,7 @@ Modifica le seguenti costanti:
 ```php
 // ===== DATABASE =====
 define('DB_HOST',     'localhost');     // Altervista usa sempre localhost
-define('DB_NAME',     'tuo_database'); // Il nome del tuo DB Altervista
+define('DB_NAME',     'my_softchi'); // Il nome del database
 define('DB_USER',     'tuo_username'); // Username Altervista
 define('DB_PASS',     'tua_password'); // Password MySQL
 
