@@ -1,55 +1,48 @@
 # ============================================================
-# Appalti SaaS — Apache .htaccess principale
-# Compatibile con Apache 2.4 / mod_rewrite / Altervista
+# Appalti SaaS — Apache .htaccess
+# Compatibile con Apache 2.4 + Altervista
 # ============================================================
 
-Options -Indexes -MultiViews
-ServerSignature Off
-
-# ============================================================
-# HTTPS redirect (abilita in produzione)
-# ============================================================
-# RewriteEngine On
-# RewriteCond %{HTTPS} off
-# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+Options -Indexes
 
 # ============================================================
 # URL Rewriting
 # ============================================================
-RewriteEngine On
-RewriteBase /
+<IfModule mod_rewrite.c>
+    RewriteEngine On
 
-# Redirect root to login or dashboard
-RewriteRule ^$ index.php [L]
+    # *** ALTERVISTA: aggiorna il percorso se necessario ***
+    # Se il sito e' in una sottocartella, imposta RewriteBase
+    # Es: RewriteBase /1_GestPM/v5/appalti-saas-main/
+    RewriteBase /
 
-# Block direct access to php/ directory
-RewriteRule ^php/ - [F,L]
+    # Block direct access to php/ directory
+    RewriteRule ^php/ - [F,L]
 
-# Allow api/ and pages/ directly (they self-bootstrap)
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(api|pages|components|css|js|uploads)/(.*)$ $1/$2 [L]
+    # Redirect root to index.php
+    RewriteRule ^$ index.php [L]
+
+    # Pass-through for existing files/directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(api|pages|components|css|js|uploads)/(.*)$ $1/$2 [L]
+</IfModule>
 
 # ============================================================
-# SECURITY HEADERS (mod_headers required)
+# SECURITY HEADERS
 # ============================================================
 <IfModule mod_headers.c>
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-XSS-Protection "1; mode=block"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
 
-    # Remove server info
-    Header unset Server
-    Header unset X-Powered-By
-
-    # Cache control for static assets
+    # Cache: static assets
     <FilesMatch "\.(css|js|png|jpg|gif|ico|woff2?)$">
         Header set Cache-Control "public, max-age=2592000"
     </FilesMatch>
 
-    # No cache for PHP/API
+    # No cache for PHP
     <FilesMatch "\.php$">
         Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
         Header set Pragma "no-cache"
@@ -57,45 +50,65 @@ RewriteRule ^(api|pages|components|css|js|uploads)/(.*)$ $1/$2 [L]
 </IfModule>
 
 # ============================================================
-# BLOCK DANGEROUS FILES
+# BLOCK DANGEROUS FILES (Apache 2.4 syntax)
 # ============================================================
-<FilesMatch "(^\.env|\.log|composer\.json|composer\.lock|package\.json|\.git)">
-    Order allow,deny
-    Deny from all
+<FilesMatch "(^\.env|\.log|composer\.(json|lock)|package\.json)">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
 </FilesMatch>
 
-# Block direct access to PHP config/core files
+# Block direct access to PHP core files
 <FilesMatch "^(config|db|auth|functions|bootstrap)\.php$">
-    Order allow,deny
-    Deny from all
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
 </FilesMatch>
 
 # ============================================================
-# UPLOADS DIRECTORY — No PHP execution
-# NOTE: <Directory> is not allowed in .htaccess; PHP blocking
-#       is handled by the uploads/.htaccess written at runtime.
-# ============================================================
-
-# ============================================================
-# PHP SETTINGS (shared hosting)
+# PHP SETTINGS — solo se PHP gira come modulo Apache
+# (su Altervista con PHP-FPM queste righe vengono ignorate)
 # ============================================================
 <IfModule mod_php.c>
     php_value upload_max_filesize 50M
     php_value post_max_size 52M
     php_value max_execution_time 120
-    php_value max_input_time 120
     php_value memory_limit 256M
     php_flag display_errors Off
     php_flag log_errors On
-    php_value error_log logs/php_errors.log
-    php_value session.cookie_httponly 1
-    php_value session.cookie_samesite Strict
-    php_flag session.use_strict_mode 1
+</IfModule>
+<IfModule mod_php7.c>
+    php_value upload_max_filesize 50M
+    php_value post_max_size 52M
+    php_value max_execution_time 120
+    php_value memory_limit 256M
+    php_flag display_errors Off
+    php_flag log_errors On
+</IfModule>
+<IfModule mod_php8.c>
+    php_value upload_max_filesize 50M
+    php_value post_max_size 52M
+    php_value max_execution_time 120
+    php_value memory_limit 256M
+    php_flag display_errors Off
+    php_flag log_errors On
 </IfModule>
 
-# PHP 8 via FPM (Altervista/cPanel)
-<IfModule mod_fcgid.c>
-    FcgidMaxRequestLen 54525952
+# ============================================================
+# GZIP COMPRESSION
+# ============================================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
 </IfModule>
 
 # ============================================================
@@ -105,20 +118,4 @@ RewriteRule ^(api|pages|components|css|js|uploads)/(.*)$ $1/$2 [L]
     AddType application/javascript .js
     AddType text/css .css
     AddType image/svg+xml .svg
-    AddType application/font-woff2 .woff2
 </IfModule>
-
-# ============================================================
-# GZIP COMPRESSION
-# ============================================================
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/css
-    AddOutputFilterByType DEFLATE application/javascript application/json
-    AddOutputFilterByType DEFLATE application/xml text/xml
-    AddOutputFilterByType DEFLATE image/svg+xml
-</IfModule>
-
-# ============================================================
-# ETAG
-# ============================================================
-FileETag MTime Size
