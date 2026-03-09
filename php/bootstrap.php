@@ -47,7 +47,11 @@ set_exception_handler(function (Throwable $e) {
         'trace' => APP_DEBUG ? $e->getTraceAsString() : '***',
     ]);
 
-    if (isAjax() || strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') === 0) {
+    // Rileva richiesta API: SCRIPT_NAME contiene /api/ (funziona indipendentemente
+    // dal basepath e dal fatto che X-Requested-With venga rimosso dal proxy)
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? '';
+    $isApiReq   = isAjax() || strpos($scriptName, '/api/') !== false;
+    if ($isApiReq) {
         jsonError(
             APP_DEBUG ? $e->getMessage() : 'Errore interno del server',
             500
