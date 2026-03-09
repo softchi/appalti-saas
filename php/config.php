@@ -72,28 +72,23 @@ define('MAX_LOGIN_ATTEMPTS', 5);
 define('LOCKOUT_DURATION', 900);       // 15 minuti in secondi
 define('TOKEN_RESET_EXPIRY', 3600);    // 1 ora
 
-// Headers sicurezza
-define('SECURITY_HEADERS', [
-    'X-Content-Type-Options'    => 'nosniff',
-    'X-Frame-Options'           => 'SAMEORIGIN',
-    'X-XSS-Protection'          => '1; mode=block',
-    'Referrer-Policy'           => 'strict-origin-when-cross-origin',
-    'Permissions-Policy'        => 'geolocation=(), microphone=(), camera=()',
-    'Content-Security-Policy'   =>
-        "default-src 'self'; " .
-        "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com; " .
-        "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com fonts.googleapis.com; " .
-        "font-src 'self' fonts.gstatic.com cdn.jsdelivr.net; " .
-        "img-src 'self' data: blob:; " .
-        "connect-src 'self'; " .
-        "frame-ancestors 'self';",
-]);
+// CSP policy (usata da functions.php via define CSP_POLICY)
+define('CSP_POLICY',
+    "default-src 'self'; " .
+    "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com; " .
+    "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com fonts.googleapis.com; " .
+    "font-src 'self' fonts.gstatic.com cdn.jsdelivr.net; " .
+    "img-src 'self' data: blob:; " .
+    "connect-src 'self'; " .
+    "frame-ancestors 'self';"
+);
 
 // =============================================================================
 // UPLOAD FILE
 // =============================================================================
 define('UPLOAD_MAX_SIZE', 52428800);   // 50 MB in bytes
-define('UPLOAD_ALLOWED_TYPES', [
+// FIX: array non supportati in define() su PHP < 7 / Altervista -> uso $GLOBALS
+$GLOBALS['UPLOAD_ALLOWED_TYPES'] = [
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -113,12 +108,12 @@ define('UPLOAD_ALLOWED_TYPES', [
     'application/x-zip-compressed',
     'application/dwg', // AutoCAD
     'application/dxf',
-]);
-define('UPLOAD_ALLOWED_EXT', [
+];
+$GLOBALS['UPLOAD_ALLOWED_EXT'] = [
     'pdf','doc','docx','xls','xlsx','ppt','pptx',
     'jpg','jpeg','png','gif','webp','svg',
     'txt','csv','zip','rar','7z','dwg','dxf','ifc',
-]);
+];
 
 // =============================================================================
 // PAGINAZIONE
