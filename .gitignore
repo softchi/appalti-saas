@@ -1,0 +1,21 @@
+# Config con credenziali (da modificare prima del deploy)
+# php/config.php
+
+# Upload utenti
+uploads/documenti/*
+uploads/verbali/*
+uploads/temp/*
+!uploads/documenti/.gitkeep
+!uploads/verbali/.gitkeep
+!uploads/temp/.gitkeep
+
+# Log
+logs/
+*.log
+
+# ZIP
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db

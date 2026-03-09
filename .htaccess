@@ -1,0 +1,127 @@
+# ============================================================
+# Appalti SaaS — Apache .htaccess principale
+# Compatibile con Apache 2.4 / mod_rewrite / Altervista
+# ============================================================
+
+Options -Indexes -MultiViews
+ServerSignature Off
+
+# ============================================================
+# HTTPS redirect (abilita in produzione)
+# ============================================================
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ============================================================
+# URL Rewriting
+# ============================================================
+RewriteEngine On
+RewriteBase /
+
+# Redirect root to login or dashboard
+RewriteRule ^$ index.php [L]
+
+# Block direct access to php/ directory
+RewriteRule ^php/ - [F,L]
+
+# Allow api/ and pages/ directly (they self-bootstrap)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(api|pages|components|css|js|uploads)/(.*)$ $1/$2 [L]
+
+# ============================================================
+# SECURITY HEADERS (mod_headers required)
+# ============================================================
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+
+    # Remove server info
+    Header unset Server
+    Header unset X-Powered-By
+
+    # Cache control for static assets
+    <FilesMatch "\.(css|js|png|jpg|gif|ico|woff2?)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+
+    # No cache for PHP/API
+    <FilesMatch "\.php$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+    </FilesMatch>
+</IfModule>
+
+# ============================================================
+# BLOCK DANGEROUS FILES
+# ============================================================
+<FilesMatch "(^\.env|\.log|composer\.json|composer\.lock|package\.json|\.git)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block direct access to PHP config/core files
+<FilesMatch "^(config|db|auth|functions|bootstrap)\.php$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# ============================================================
+# UPLOADS DIRECTORY — No PHP execution
+# ============================================================
+<IfModule mod_php.c>
+    <Directory uploads>
+        php_flag engine off
+    </Directory>
+</IfModule>
+
+# ============================================================
+# PHP SETTINGS (shared hosting)
+# ============================================================
+<IfModule mod_php.c>
+    php_value upload_max_filesize 50M
+    php_value post_max_size 52M
+    php_value max_execution_time 120
+    php_value max_input_time 120
+    php_value memory_limit 256M
+    php_flag display_errors Off
+    php_flag log_errors On
+    php_value error_log logs/php_errors.log
+    php_value session.cookie_httponly 1
+    php_value session.cookie_samesite Strict
+    php_flag session.use_strict_mode 1
+</IfModule>
+
+# PHP 8 via FPM (Altervista/cPanel)
+<IfModule mod_fcgid.c>
+    FcgidMaxRequestLen 54525952
+</IfModule>
+
+# ============================================================
+# MIME TYPES
+# ============================================================
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType text/css .css
+    AddType image/svg+xml .svg
+    AddType application/font-woff2 .woff2
+</IfModule>
+
+# ============================================================
+# GZIP COMPRESSION
+# ============================================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE application/xml text/xml
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# ============================================================
+# ETAG
+# ============================================================
+FileETag MTime Size

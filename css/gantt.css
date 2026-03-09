@@ -1,0 +1,435 @@
+/* =============================================================================
+   GANTT CHART - CSS
+   Diagramma di Gantt interattivo custom
+   ============================================================================= */
+
+:root {
+  --gantt-header-h:     48px;
+  --gantt-row-h:        40px;
+  --gantt-tree-w:       340px;
+  --gantt-bg:           #ffffff;
+  --gantt-header-bg:    #f8f9fa;
+  --gantt-border:       #e9ecef;
+  --gantt-row-hover:    rgba(13, 110, 253, 0.04);
+  --gantt-row-alt:      rgba(0, 0, 0, 0.015);
+  --gantt-today-line:   #dc3545;
+  --gantt-milestone:    #6f42c1;
+  --gantt-bar-default:  #0d6efd;
+  --gantt-bar-done:     #198754;
+  --gantt-bar-late:     #dc3545;
+  --gantt-bar-future:   #6ea8fe;
+  --gantt-link-color:   #fd7e14;
+  --gantt-weekend:      rgba(0,0,0,0.025);
+}
+
+/* -----------------------------------------------------------------------------
+   WRAPPER PRINCIPALE
+----------------------------------------------------------------------------- */
+.gantt-wrapper {
+  position: relative;
+  border: 1px solid var(--gantt-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--gantt-bg);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  user-select: none;
+}
+
+/* Toolbar */
+.gantt-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: #fff;
+  border-bottom: 1px solid var(--gantt-border);
+  flex-wrap: wrap;
+}
+
+.gantt-toolbar .toolbar-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6c757d;
+  margin-right: 0.25rem;
+}
+
+/* Zoom selector */
+.gantt-zoom-btn {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  border: 1px solid #dee2e6;
+  background: #fff;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.gantt-zoom-btn:hover, .gantt-zoom-btn.active {
+  background: #0d6efd;
+  color: white;
+  border-color: #0d6efd;
+}
+
+/* -----------------------------------------------------------------------------
+   LAYOUT PRINCIPALE: albero sinistra + grafico destra
+----------------------------------------------------------------------------- */
+.gantt-container {
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Albero WBS - sinistra */
+.gantt-tree {
+  width: var(--gantt-tree-w);
+  flex-shrink: 0;
+  border-right: 2px solid var(--gantt-border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: var(--gantt-bg);
+}
+
+.gantt-tree-header {
+  height: var(--gantt-header-h);
+  background: var(--gantt-header-bg);
+  border-bottom: 1px solid var(--gantt-border);
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gantt-tree-body {
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  scrollbar-width: thin;
+}
+
+/* Righe albero */
+.gantt-tree-row {
+  display: flex;
+  align-items: center;
+  height: var(--gantt-row-h);
+  padding: 0 0.5rem;
+  border-bottom: 1px solid var(--gantt-border);
+  cursor: pointer;
+  transition: background 0.1s;
+  position: relative;
+}
+
+.gantt-tree-row:nth-child(even) { background: var(--gantt-row-alt); }
+.gantt-tree-row:hover { background: var(--gantt-row-hover); }
+.gantt-tree-row.selected { background: #e8f0fe; }
+.gantt-tree-row.milestone { background: #f3e8ff; }
+.gantt-tree-row.fase { background: #f0f7ff; font-weight: 600; }
+
+.gantt-tree-row .expand-btn {
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #6c757d;
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+  border-radius: 3px;
+}
+.gantt-tree-row .expand-btn:hover { background: #dee2e6; }
+.gantt-tree-row .expand-btn.expanded { transform: rotate(90deg); }
+
+.gantt-tree-row .task-indent {
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.gantt-tree-row .task-icon {
+  width: 16px;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+  margin-right: 0.35rem;
+}
+.task-icon.task-type   { color: #0d6efd; }
+.task-icon.milestone   { color: #6f42c1; }
+.task-icon.fase        { color: #0dcaf0; }
+.task-icon.sommario    { color: #fd7e14; }
+
+.gantt-tree-row .task-name {
+  flex: 1;
+  font-size: 0.83rem;
+  color: #212529;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gantt-tree-row .task-name.fase  { font-weight: 700; color: #0a367a; }
+
+.gantt-tree-row .task-wbs {
+  font-size: 0.7rem;
+  color: #adb5bd;
+  font-family: monospace;
+  margin-right: 0.4rem;
+  flex-shrink: 0;
+}
+
+.gantt-tree-row .task-perc {
+  font-size: 0.72rem;
+  color: #6c757d;
+  flex-shrink: 0;
+  text-align: right;
+  width: 38px;
+}
+
+/* Colonne info aggiuntive */
+.gantt-tree-cols {
+  display: flex;
+  height: var(--gantt-header-h);
+  background: var(--gantt-header-bg);
+  border-bottom: 1px solid var(--gantt-border);
+  border-top: 1px solid var(--gantt-border);
+}
+
+.gantt-col-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.5rem;
+  border-left: 1px solid var(--gantt-border);
+  white-space: nowrap;
+}
+
+/* Area Gantt - destra */
+.gantt-chart-area {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  position: relative;
+}
+
+/* Canvas contenitore */
+.gantt-canvas-container {
+  position: relative;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* Sincronizzazione scroll verticale */
+.gantt-tree-body, .gantt-canvas-container {
+  /* scrollbar allineata */
+}
+
+/* Canvas Gantt principale */
+#ganttCanvas {
+  display: block;
+  cursor: default;
+}
+
+/* Linea TODAY */
+.gantt-today-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--gantt-today-line);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.gantt-today-marker::before {
+  content: 'Oggi';
+  position: absolute;
+  top: 0;
+  left: -16px;
+  background: var(--gantt-today-line);
+  color: white;
+  font-size: 0.65rem;
+  padding: 1px 4px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+/* Tooltip Gantt */
+.gantt-tooltip {
+  position: fixed;
+  z-index: 9999;
+  background: rgba(33, 37, 41, 0.95);
+  color: white;
+  padding: 0.6rem 0.9rem;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  pointer-events: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  max-width: 280px;
+  line-height: 1.4;
+  display: none;
+}
+
+.gantt-tooltip.show { display: block; }
+.gantt-tooltip .tt-title { font-weight: 700; margin-bottom: 4px; }
+.gantt-tooltip .tt-row { display: flex; gap: 6px; margin-top: 2px; }
+.gantt-tooltip .tt-label { color: #adb5bd; min-width: 60px; }
+
+/* Dipendenze frecce */
+.gantt-link-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Mini-mappa navigazione */
+.gantt-minimap {
+  height: 40px;
+  background: #f8f9fa;
+  border-top: 1px solid var(--gantt-border);
+  position: relative;
+  cursor: crosshair;
+}
+
+.gantt-minimap-viewport {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(13, 110, 253, 0.2);
+  border: 1px solid #0d6efd;
+  pointer-events: none;
+}
+
+/* -----------------------------------------------------------------------------
+   HEADER DATE (scale temporale)
+----------------------------------------------------------------------------- */
+.gantt-header-scale {
+  display: flex;
+  height: var(--gantt-header-h);
+  background: var(--gantt-header-bg);
+  border-bottom: 1px solid var(--gantt-border);
+  position: sticky;
+  top: 0;
+  z-index: 8;
+}
+
+.gantt-scale-cell {
+  border-right: 1px solid var(--gantt-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #495057;
+  flex-shrink: 0;
+  background: var(--gantt-header-bg);
+}
+
+.gantt-scale-cell.weekend { background: #f0f0f0; }
+.gantt-scale-cell.today   { background: #fff3cd; color: #856404; }
+.gantt-scale-cell.month-start { border-left: 2px solid #6c757d; }
+
+/* Month row (sopra) */
+.gantt-month-row {
+  display: flex;
+  height: 24px;
+  background: var(--gantt-header-bg);
+  border-bottom: 1px solid var(--gantt-border);
+}
+
+.gantt-month-cell {
+  border-right: 1px solid var(--gantt-border);
+  display: flex;
+  align-items: center;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ap-primary);
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* -----------------------------------------------------------------------------
+   MODALI GANTT
+----------------------------------------------------------------------------- */
+#ganttTaskModal .modal-header { background: linear-gradient(135deg, #1565c0, #0d47a1); color: white; }
+#ganttTaskModal .modal-header .btn-close { filter: invert(1); }
+
+/* Form task nel modale */
+.task-form-section {
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.task-form-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6c757d;
+  margin-bottom: 0.5rem;
+}
+
+/* Barra avanzamento nel form */
+.perc-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.perc-slider-container input[type=range] { flex: 1; }
+.perc-slider-container .perc-value {
+  font-size: 1rem;
+  font-weight: 700;
+  min-width: 48px;
+  text-align: center;
+  color: var(--ap-primary);
+}
+
+/* -----------------------------------------------------------------------------
+   LEGENDA
+----------------------------------------------------------------------------- */
+.gantt-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: #f8f9fa;
+  border-top: 1px solid var(--gantt-border);
+  font-size: 0.78rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-bar {
+  width: 28px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.legend-bar.done      { background: var(--gantt-bar-done); }
+.legend-bar.in-corso  { background: var(--gantt-bar-default); }
+.legend-bar.late      { background: var(--gantt-bar-late); }
+.legend-bar.future    { background: var(--gantt-bar-future); }
+.legend-bar.milestone { width: 12px; height: 12px; border-radius: 50%; background: var(--gantt-milestone); }
