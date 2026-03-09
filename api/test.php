@@ -23,6 +23,10 @@ try {
 // Step 3: APP_URL corretto?
 $result['APP_URL']       = APP_URL;
 $result['DOCUMENT_ROOT'] = $_SERVER['DOCUMENT_ROOT'] ?? 'n/a';
+// Se APP_URL contiene /api, config.php è ancora quello vecchio
+$result['config_version'] = defined('DB_HOST_LOCAL') || str_contains(APP_URL, '/api/')
+    ? 'VECCHIO (reuploada php/config.php)'
+    : 'NUOVO OK';
 
 // Step 4: DB connettibile?
 try {
