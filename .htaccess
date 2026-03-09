@@ -72,12 +72,9 @@ RewriteRule ^(api|pages|components|css|js|uploads)/(.*)$ $1/$2 [L]
 
 # ============================================================
 # UPLOADS DIRECTORY — No PHP execution
+# NOTE: <Directory> is not allowed in .htaccess; PHP blocking
+#       is handled by the uploads/.htaccess written at runtime.
 # ============================================================
-<IfModule mod_php.c>
-    <Directory uploads>
-        php_flag engine off
-    </Directory>
-</IfModule>
 
 # ============================================================
 # PHP SETTINGS (shared hosting)

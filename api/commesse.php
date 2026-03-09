@@ -81,7 +81,7 @@ switch ($method) {
 // FUNZIONI
 // =============================================================================
 
-function listCommesse(): never
+function listCommesse(): void
 {
     $page    = get('page', 1, 'int');
     $perPage = get('per_page', ITEMS_PER_PAGE, 'int');
@@ -152,7 +152,7 @@ function listCommesse(): never
     jsonResponse($result);
 }
 
-function getCommessa(int $id): never
+function getCommessa(int $id): void
 {
     // Verifica accesso
     if (!Auth::hasRole(['SUPERADMIN','ADMIN','RUP','AMMINISTRAZIONE']) && !Auth::canAccessCommessa($id)) {
@@ -226,7 +226,7 @@ function getCommessa(int $id): never
     ]);
 }
 
-function createCommessa(): never
+function createCommessa(): void
 {
     $body = !empty($_POST) ? $_POST : getJsonBody();
 
@@ -316,7 +316,7 @@ function createCommessa(): never
     }
 }
 
-function updateCommessa(int $id): never
+function updateCommessa(int $id): void
 {
     if (!Auth::hasRole(['SUPERADMIN','ADMIN','RUP','AMMINISTRAZIONE']) && !Auth::canAccessCommessa($id)) {
         jsonError('Accesso negato a questa commessa', 403);
@@ -370,7 +370,7 @@ function updateCommessa(int $id): never
     jsonSuccess('Commessa aggiornata con successo', ['id' => $id]);
 }
 
-function deleteCommessa(int $id): never
+function deleteCommessa(int $id): void
 {
     $existing = Database::fetchOne(
         'SELECT id, oggetto, stato FROM pm_commesse WHERE id = :id',

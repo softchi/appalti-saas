@@ -64,7 +64,7 @@ switch ($method) {
 
 // =============================================================================
 
-function listTasks(int $commessaId): never
+function listTasks(int $commessaId): void
 {
     if (!Auth::canAccessCommessa($commessaId) && !Auth::hasRole(['SUPERADMIN','ADMIN'])) {
         jsonError('Accesso negato', 403);
@@ -151,7 +151,7 @@ function listTasks(int $commessaId): never
     ]);
 }
 
-function getTask(int $id): never
+function getTask(int $id): void
 {
     $task = Database::fetchOne(
         'SELECT t.*, CONCAT(u.cognome, " ", u.nome) AS assegnato_nome, f.nome AS fase_nome
@@ -184,7 +184,7 @@ function getTask(int $id): never
     jsonResponse(['task' => $task]);
 }
 
-function createTask(): never
+function createTask(): void
 {
     $body = !empty($_POST) ? $_POST : getJsonBody();
 
@@ -265,7 +265,7 @@ function createTask(): never
     }
 }
 
-function updateTask(int $id): never
+function updateTask(int $id): void
 {
     $existing = Database::fetchOne('SELECT * FROM pm_tasks WHERE id = :id', [':id' => $id]);
     if (!$existing) jsonError('Task non trovato', 404);
@@ -331,7 +331,7 @@ function updateTask(int $id): never
     jsonSuccess('Attività aggiornata', ['id' => $id]);
 }
 
-function deleteTask(int $id): never
+function deleteTask(int $id): void
 {
     $existing = Database::fetchOne('SELECT * FROM pm_tasks WHERE id = :id', [':id' => $id]);
     if (!$existing) jsonError('Task non trovato', 404);
@@ -351,7 +351,7 @@ function deleteTask(int $id): never
     jsonSuccess('Attività eliminata');
 }
 
-function reorderTasks(): never
+function reorderTasks(): void
 {
     $body = getJsonBody();
     if (empty($body['pm_tasks']) || !is_array($body['pm_tasks'])) {

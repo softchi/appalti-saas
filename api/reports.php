@@ -46,7 +46,7 @@ switch ($tipo) {
 
 // =============================================================================
 
-function reportAvanzamento(?int $commessaId): never
+function reportAvanzamento(?int $commessaId): void
 {
     if ($commessaId) {
         // Report singola commessa
@@ -120,7 +120,7 @@ function reportAvanzamento(?int $commessaId): never
     ]);
 }
 
-function reportSal(int $commessaId): never
+function reportSal(int $commessaId): void
 {
     $pm_sal = Database::fetchAll(
         'SELECT s.numero_sal, s.data_inizio, s.data_fine, s.data_emissione, s.data_approvazione, s.data_pagamento,
@@ -166,7 +166,7 @@ function reportSal(int $commessaId): never
     ]);
 }
 
-function reportCosti(int $commessaId): never
+function reportCosti(int $commessaId): void
 {
     $categorie = Database::fetchAll(
         'SELECT cl.codice, cl.descrizione, cl.unita_misura, cl.prezzo_unitario,
@@ -206,7 +206,7 @@ function reportCosti(int $commessaId): never
     ]);
 }
 
-function reportScadenze(?int $commessaId): never
+function reportScadenze(?int $commessaId): void
 {
     $sql    = 'SELECT sc.*, c.codice_commessa, c.oggetto AS commessa,
                       CONCAT(u.cognome, " ", u.nome) AS responsabile,
@@ -238,7 +238,7 @@ function reportScadenze(?int $commessaId): never
     ]);
 }
 
-function reportGantt(int $commessaId): never
+function reportGantt(int $commessaId): void
 {
     if (!$commessaId) jsonError('commessa_id richiesto', 400);
     $commessa = Database::fetchOne('SELECT id, codice_commessa, oggetto, data_inizio_prevista, data_fine_prevista FROM pm_commesse WHERE id = :id', [':id' => $commessaId]);
@@ -273,7 +273,7 @@ function reportGantt(int $commessaId): never
     ]);
 }
 
-function reportRiepilogoGlobale(): never
+function reportRiepilogoGlobale(): void
 {
     $stats = Database::fetchOne(
         'SELECT

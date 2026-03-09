@@ -47,7 +47,7 @@ set_exception_handler(function (Throwable $e) {
         'trace' => APP_DEBUG ? $e->getTraceAsString() : '***',
     ]);
 
-    if (isAjax() || str_starts_with($_SERVER['REQUEST_URI'] ?? '', '/api/')) {
+    if (isAjax() || strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') === 0) {
         jsonError(
             APP_DEBUG ? $e->getMessage() : 'Errore interno del server',
             500

@@ -59,7 +59,7 @@ switch ($method) {
 
 // =============================================================================
 
-function listDocumenti(int $commessaId): never
+function listDocumenti(int $commessaId): void
 {
     if (!$commessaId) jsonError('commessa_id richiesto', 400);
 
@@ -119,7 +119,7 @@ function listDocumenti(int $commessaId): never
     jsonResponse(array_merge($result, ['categorie' => $categorie]));
 }
 
-function getDocumento(int $id): never
+function getDocumento(int $id): void
 {
     $doc = Database::fetchOne(
         'SELECT d.*,
@@ -151,7 +151,7 @@ function getDocumento(int $id): never
     jsonResponse(['documento' => $doc, 'versioni' => $versioni]);
 }
 
-function uploadDocumento(): never
+function uploadDocumento(): void
 {
     if (empty($_FILES['file'])) {
         jsonError('File non ricevuto', 400);
@@ -234,7 +234,7 @@ function uploadDocumento(): never
     ], 201);
 }
 
-function updateDocumento(int $id): never
+function updateDocumento(int $id): void
 {
     $doc = Database::fetchOne('SELECT * FROM pm_documenti WHERE id = :id', [':id' => $id]);
     if (!$doc) jsonError('Documento non trovato', 404);
@@ -259,7 +259,7 @@ function updateDocumento(int $id): never
     jsonSuccess('Documento aggiornato');
 }
 
-function deleteDocumento(int $id): never
+function deleteDocumento(int $id): void
 {
     $doc = Database::fetchOne('SELECT * FROM pm_documenti WHERE id = :id', [':id' => $id]);
     if (!$doc) jsonError('Documento non trovato', 404);
@@ -276,7 +276,7 @@ function deleteDocumento(int $id): never
     jsonSuccess('Documento archiviato');
 }
 
-function downloadDocumento(int $id): never
+function downloadDocumento(int $id): void
 {
     header_remove('Content-Type');
 

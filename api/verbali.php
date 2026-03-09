@@ -7,8 +7,8 @@ require_once __DIR__ . '/../php/bootstrap.php';
 
 Auth::require();
 $method = $_SERVER['REQUEST_METHOD'];
-$action = get('action', 'string', '');
-$id     = get('id', 'int', 0);
+$action = get('action', '', 'string');
+$id     = get('id', 0, 'int');
 
 // Route
 try {
@@ -29,16 +29,16 @@ try {
 // LIST
 // ============================================================
 function listVerbali(): void {
-    Auth::requireCsrf(['GET']);
+    // GET requests do not require CSRF
 
-    $page     = max(1, (int)get('page','int',1));
-    $perPage  = min(50, max(5, (int)get('per_page','int',15)));
-    $search   = get('search','string','');
-    $tipo     = get('tipo','string','');
-    $commId   = get('commessa_id','int',0);
-    $dataDa   = get('data_da','date','');
-    $dataA    = get('data_a','date','');
-    $sort     = get('sort','string','data_verbale_desc');
+    $page     = max(1, (int)get('page', 1, 'int'));
+    $perPage  = min(50, max(5, (int)get('per_page', 15, 'int')));
+    $search   = get('search', '', 'string');
+    $tipo     = get('tipo', '', 'string');
+    $commId   = get('commessa_id', 0, 'int');
+    $dataDa   = get('data_da', '', 'string');
+    $dataA    = get('data_a', '', 'string');
+    $sort     = get('sort', 'data_verbale_desc', 'string');
 
     $where  = ['1=1'];
     $params = [];
@@ -98,7 +98,8 @@ function listVerbali(): void {
         array_merge($params, [':limit' => $perPage, ':offset' => $offset])
     );
 
-    jsonSuccess($rows, [
+    jsonResponse([
+        'verbali'      => $rows,
         'current_page' => $page,
         'last_page'    => $pages,
         'total'        => (int)$total,
@@ -121,7 +122,7 @@ function getVerbale(int $id): void {
         [':id' => $id]
     );
     if (!$v) jsonError('Verbale non trovato', 404);
-    jsonSuccess($v);
+    jsonResponse(['verbale' => $v]);
 }
 
 // ============================================================
@@ -168,18 +169,18 @@ function createVerbale(): void {
         'redatto_da'     => Auth::id(),
     ]);
 
-    Logger::audit('CREATE', 'pm_verbali', $insertId, 'SUCCESSO');
+    Logger::audit('CREATE', 'pm_verbali', $insertId);
 
-    // Notifica team
-    createNotification(
+    // Notifica team commessa
+    notifyCommessaTeam(
+        $commessaId,
         'VERBALE',
-        'Nuovo verbale: ' . sanitizeString($data['oggetto']),
-        '/api/pm_verbali.php?id=' . $insertId,
-        null,
-        $commessaId
+        'Nuovo verbale: ' . sanitizeString($data['oggetto'], 100),
+        'È stato creato un nuovo verbale di cantiere.',
+        '/api/verbali.php?id=' . $insertId
     );
 
-    jsonSuccess(['id' => $insertId, 'numero_verbale' => $data['numero_verbale']], [], 'Verbale creato');
+    jsonSuccess('Verbale creato', ['id' => $insertId, 'numero_verbale' => $data['numero_verbale']], 201);
 }
 
 // ============================================================
@@ -210,8 +211,8 @@ function updateVerbale(): void {
     if (empty($update)) jsonError('Nessun dato da aggiornare', 400);
 
     Database::update('pm_verbali', $update, ['id' => $id]);
-    Logger::audit('UPDATE', 'pm_verbali', $id, 'SUCCESSO');
-    jsonSuccess(null, [], 'Verbale aggiornato');
+    Logger::audit('UPDATE', 'pm_verbali', $id);
+    jsonSuccess('Verbale aggiornato');
 }
 
 // ============================================================
@@ -222,13 +223,13 @@ function deleteVerbale(): void {
     Auth::require('pm_verbali.delete');
 
     $data = json_decode(file_get_contents('php://input'), true) ?? [];
-    $id   = (int)($data['id'] ?? get('id','int',0));
+    $id   = (int)($data['id'] ?? get('id', 0, 'int'));
     if (!$id) jsonError('ID mancante', 400);
 
     $existing = Database::fetchOne('SELECT id FROM pm_verbali WHERE id=:id', [':id'=>$id]);
     if (!$existing) jsonError('Verbale non trovato', 404);
 
     Database::delete('pm_verbali', ['id' => $id]);
-    Logger::audit('DELETE', 'pm_verbali', $id, 'SUCCESSO');
-    jsonSuccess(null, [], 'Verbale eliminato');
+    Logger::audit('DELETE', 'pm_verbali', $id);
+    jsonSuccess('Verbale eliminato');
 }

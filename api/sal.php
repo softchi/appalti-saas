@@ -51,7 +51,7 @@ switch ($method) {
 
 // =============================================================================
 
-function listSal(int $commessaId): never
+function listSal(int $commessaId): void
 {
     if (!$commessaId) jsonError('commessa_id richiesto', 400);
 
@@ -109,7 +109,7 @@ function listSal(int $commessaId): never
     ]);
 }
 
-function getSal(int $id): never
+function getSal(int $id): void
 {
     $pm_sal = Database::fetchOne(
         'SELECT s.*,
@@ -150,7 +150,7 @@ function getSal(int $id): never
     jsonResponse(['pm_sal' => $pm_sal, 'voci' => $voci]);
 }
 
-function createSal(): never
+function createSal(): void
 {
     $body = !empty($_POST) ? $_POST : getJsonBody();
 
@@ -269,7 +269,7 @@ function createSal(): never
     }
 }
 
-function updateSal(int $id): never
+function updateSal(int $id): void
 {
     $existing = Database::fetchOne('SELECT * FROM pm_sal WHERE id = :id', [':id' => $id]);
     if (!$existing) jsonError('SAL non trovato', 404);
@@ -322,7 +322,7 @@ function updateSal(int $id): never
     jsonSuccess('SAL aggiornato con successo');
 }
 
-function approveSal(int $id): never
+function approveSal(int $id): void
 {
     if (!$id) jsonError('ID SAL richiesto', 400);
 
