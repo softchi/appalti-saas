@@ -25,9 +25,17 @@ $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
          || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
          || (int)($_SERVER['SERVER_PORT'] ?? 80) === 443
     ? 'https' : 'http';
-$host     = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$script   = dirname($_SERVER['SCRIPT_NAME'] ?? '');
-$basePath = rtrim($script, '/\\');
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+// ALTERVISTA FIX: non usare dirname(SCRIPT_NAME) perché varia in base allo
+// script chiamato (es. api/login.php → base = /…/api invece di /…/).
+// Calcoliamo il percorso web dell'app sottraendo DOCUMENT_ROOT dal path
+// fisico dell'app (dirname(__DIR__) è sempre la root dell'app da config.php).
+$_docRoot = rtrim(str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? ''), '/');
+$_appRoot = rtrim(str_replace('\\', '/', dirname(__DIR__)), '/');
+$basePath = ($_docRoot !== '' && str_starts_with($_appRoot, $_docRoot))
+    ? substr($_appRoot, strlen($_docRoot))
+    : rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
+unset($_docRoot, $_appRoot);
 define('APP_URL',         $protocol . '://' . $host . $basePath);
 define('BASE_PATH',       dirname(__DIR__));
 define('PHP_PATH',        BASE_PATH . '/php');

@@ -21,7 +21,8 @@ try {
 }
 
 // Step 3: APP_URL corretto?
-$result['APP_URL'] = APP_URL;
+$result['APP_URL']       = APP_URL;
+$result['DOCUMENT_ROOT'] = $_SERVER['DOCUMENT_ROOT'] ?? 'n/a';
 
 // Step 4: DB connettibile?
 try {
