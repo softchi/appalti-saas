@@ -1,78 +1,67 @@
 <?php
 /**
  * APPALTI PUBBLICI SAAS - Configurazione Principale
- *
- * IMPORTANTE: Rinominare questo file in config.php e NON committarlo
- * su repository pubblici. Contenere le credenziali in variabili
- * d'ambiente in produzione.
- *
- * @version 1.0.0
+ * @version 1.0.1 (FIXED per Altervista)
  */
-
-// Prevent direct access
 if (!defined('APP_INIT')) {
     http_response_code(403);
     exit('Accesso negato');
 }
-
 // =============================================================================
 // AMBIENTE
 // =============================================================================
-define('APP_ENV', getenv('APP_ENV') ?: 'production'); // development | production
-define('APP_DEBUG', APP_ENV === 'development');
-define('APP_VERSION', '1.0.0');
-define('APP_NAME', 'Appalti Pubblici SaaS');
-define('APP_TAGLINE', 'Gestione Commesse Pubbliche - D.Lgs. 36/2023');
-
+define('APP_ENV',      getenv('APP_ENV') ?: 'production');
+define('APP_DEBUG',    APP_ENV === 'development');
+define('APP_VERSION',  '1.0.0');
+define('APP_NAME',     'Appalti Pubblici SaaS');
+define('APP_TAGLINE',  'Gestione Commesse Pubbliche - D.Lgs. 36/2023');
 // =============================================================================
 // URL E PERCORSI
 // =============================================================================
-// Rilevamento automatico del base URL
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host     = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $script   = dirname($_SERVER['SCRIPT_NAME'] ?? '');
 $basePath = rtrim($script, '/\\');
-
-define('APP_URL', $protocol . '://' . $host . $basePath);
-define('BASE_PATH', dirname(__DIR__)); // root del progetto
-define('PHP_PATH', BASE_PATH . '/php');
-define('API_PATH', BASE_PATH . '/api');
+define('APP_URL',         $protocol . '://' . $host . $basePath);
+define('BASE_PATH',       dirname(__DIR__));
+define('PHP_PATH',        BASE_PATH . '/php');
+define('API_PATH',        BASE_PATH . '/api');
 define('COMPONENTS_PATH', BASE_PATH . '/components');
-define('UPLOADS_PATH', BASE_PATH . '/uploads');
-define('UPLOADS_URL', APP_URL . '/uploads');
-
+define('UPLOADS_PATH',    BASE_PATH . '/uploads');
+define('UPLOADS_URL',     APP_URL . '/uploads');
 // =============================================================================
 // DATABASE
+// FIX: rimosso define('DB_OPTIONS', [...]) con costanti PDO dentro define()
+//      causa errore 500 su Altervista. Le opzioni PDO ora sono in db.php
+//      come array normale al momento della connessione.
 // =============================================================================
-define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
-define('DB_PORT', (int)(getenv('DB_PORT') ?: 3306));
-define('DB_NAME', getenv('DB_NAME') ?: 'my_softchi');
-define('DB_USER', getenv('DB_USER') ?: 'root');
-define('DB_PASS', getenv('DB_PASS') ?: '');
+define('DB_HOST',    getenv('DB_HOST') ?: 'localhost');
+define('DB_PORT',    (int)(getenv('DB_PORT') ?: 3306));
+define('DB_NAME',    getenv('DB_NAME') ?: 'my_softchi');
+define('DB_USER',    getenv('DB_USER') ?: 'root');
+define('DB_PASS',    getenv('DB_PASS') ?: '');
 define('DB_CHARSET', 'utf8mb4');
-
-
+// NOTA: le DB_OPTIONS sono definite direttamente in db.php
 // =============================================================================
 // SESSIONI
 // =============================================================================
-define('SESSION_NAME', 'appalti_sid');
-define('SESSION_LIFETIME', 28800);   // 8 ore in secondi
-define('SESSION_SECURE', $protocol === 'https');
-define('SESSION_HTTP_ONLY', true);
-define('SESSION_SAME_SITE', 'Strict');
-define('CSRF_TOKEN_LENGTH', 32);
-define('REMEMBER_ME_DAYS', 30);
-
+define('SESSION_NAME',       'appalti_sid');
+define('SESSION_LIFETIME',   28800);
+define('SESSION_SECURE',     $protocol === 'https');
+define('SESSION_HTTP_ONLY',  true);
+define('SESSION_SAME_SITE',  'Strict');
+define('CSRF_TOKEN_LENGTH',  32);
+define('REMEMBER_ME_DAYS',   30);
 // =============================================================================
 // SICUREZZA
 // =============================================================================
 define('PASSWORD_MIN_LENGTH', 8);
-define('PASSWORD_COST', 12);           // bcrypt cost factor
-define('MAX_LOGIN_ATTEMPTS', 5);
-define('LOCKOUT_DURATION', 900);       // 15 minuti in secondi
-define('TOKEN_RESET_EXPIRY', 3600);    // 1 ora
-
-// CSP policy (usata da functions.php via define CSP_POLICY)
+define('PASSWORD_COST',       12);
+define('MAX_LOGIN_ATTEMPTS',  5);
+define('LOCKOUT_DURATION',    900);
+define('TOKEN_RESET_EXPIRY',  3600);
+// FIX: rimosso define('SECURITY_HEADERS', [...]) con array
+//      Le header vengono impostate direttamente in bootstrap.php
 define('CSP_POLICY',
     "default-src 'self'; " .
     "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net cdnjs.cloudflare.com; " .
@@ -82,12 +71,12 @@ define('CSP_POLICY',
     "connect-src 'self'; " .
     "frame-ancestors 'self';"
 );
-
 // =============================================================================
 // UPLOAD FILE
+// FIX: rimosso define('UPLOAD_ALLOWED_TYPES', [...]) con array
+//      Gli array sono usati come variabili globali invece di costanti
 // =============================================================================
-define('UPLOAD_MAX_SIZE', 52428800);   // 50 MB in bytes
-// FIX: array non supportati in define() su PHP < 7 / Altervista -> uso $GLOBALS
+define('UPLOAD_MAX_SIZE', 52428800);
 $GLOBALS['UPLOAD_ALLOWED_TYPES'] = [
     'application/pdf',
     'application/msword',
@@ -96,69 +85,56 @@ $GLOBALS['UPLOAD_ALLOWED_TYPES'] = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/vnd.ms-powerpoint',
     'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-    'image/svg+xml',
-    'text/plain',
-    'text/csv',
-    'application/zip',
-    'application/x-rar-compressed',
-    'application/x-zip-compressed',
-    'application/dwg', // AutoCAD
-    'application/dxf',
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+    'text/plain', 'text/csv',
+    'application/zip', 'application/x-rar-compressed', 'application/x-zip-compressed',
+    'application/dwg', 'application/dxf',
 ];
 $GLOBALS['UPLOAD_ALLOWED_EXT'] = [
     'pdf','doc','docx','xls','xlsx','ppt','pptx',
     'jpg','jpeg','png','gif','webp','svg',
     'txt','csv','zip','rar','7z','dwg','dxf','ifc',
 ];
-
 // =============================================================================
 // PAGINAZIONE
 // =============================================================================
-define('ITEMS_PER_PAGE', 20);
+define('ITEMS_PER_PAGE',     20);
 define('MAX_ITEMS_PER_PAGE', 100);
-
 // =============================================================================
 // EMAIL (SMTP)
 // =============================================================================
-define('MAIL_ENABLED', false);         // Attivare in produzione
-define('MAIL_HOST', getenv('MAIL_HOST') ?: 'smtp.example.com');
-define('MAIL_PORT', (int)(getenv('MAIL_PORT') ?: 587));
-define('MAIL_USER', getenv('MAIL_USER') ?: '');
-define('MAIL_PASS', getenv('MAIL_PASS') ?: '');
-define('MAIL_FROM', getenv('MAIL_FROM') ?: 'noreply@pm_appalti.local');
-define('MAIL_FROM_NAME', APP_NAME);
-define('MAIL_ENCRYPTION', 'tls');      // tls | ssl | none
-
+define('MAIL_ENABLED',    false);
+define('MAIL_HOST',       getenv('MAIL_HOST') ?: 'smtp.example.com');
+define('MAIL_PORT',       (int)(getenv('MAIL_PORT') ?: 587));
+define('MAIL_USER',       getenv('MAIL_USER') ?: '');
+define('MAIL_PASS',       getenv('MAIL_PASS') ?: '');
+define('MAIL_FROM',       getenv('MAIL_FROM') ?: 'noreply@appalti.local');
+define('MAIL_FROM_NAME',  APP_NAME);
+define('MAIL_ENCRYPTION', 'tls');
 // =============================================================================
 // AI ASSISTANT (Anthropic Claude API)
 // =============================================================================
-define('AI_ENABLED', !empty(getenv('ANTHROPIC_API_KEY')));
-define('AI_API_KEY', getenv('ANTHROPIC_API_KEY') ?: '');
-define('AI_MODEL', 'claude-sonnet-4-6');
+define('AI_ENABLED',   !empty(getenv('ANTHROPIC_API_KEY')));
+define('AI_API_KEY',   getenv('ANTHROPIC_API_KEY') ?: '');
+define('AI_MODEL',     'claude-sonnet-4-6');
 define('AI_MAX_TOKENS', 2048);
-define('AI_ENDPOINT', 'https://api.anthropic.com/v1/messages');
-
+define('AI_ENDPOINT',  'https://api.anthropic.com/v1/messages');
 // =============================================================================
 // LOGGING
 // =============================================================================
-define('LOG_PATH', BASE_PATH . '/logs');
-define('LOG_LEVEL', APP_DEBUG ? 'DEBUG' : 'ERROR'); // DEBUG|INFO|WARNING|ERROR
-define('LOG_MAX_SIZE', 10485760); // 10 MB
-
+define('LOG_PATH',     BASE_PATH . '/logs');
+define('LOG_LEVEL',    APP_DEBUG ? 'DEBUG' : 'ERROR');
+define('LOG_MAX_SIZE', 10485760);
 // =============================================================================
 // TIMEZONE E LOCALE
+// FIX: rimosso setlocale() con it_IT.UTF-8 - causa errore su Altervista
+//      perché il locale italiano non è installato sul server
 // =============================================================================
 date_default_timezone_set('Europe/Rome');
-setlocale(LC_TIME, 'it_IT.UTF-8', 'it_IT', 'Italian');
-define('DATE_FORMAT_IT', 'd/m/Y');
+define('DATE_FORMAT_IT',     'd/m/Y');
 define('DATETIME_FORMAT_IT', 'd/m/Y H:i');
 define('CURRENCY', 'EUR');
-define('LOCALE', 'it_IT');
-
+define('LOCALE',   'it_IT');
 // =============================================================================
 // ERROR HANDLING
 // =============================================================================
