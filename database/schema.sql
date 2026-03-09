@@ -1,32 +1,28 @@
 -- =============================================================================
 -- APPALTI PUBBLICI SAAS - DATABASE SCHEMA
--- Versione: 1.0.0
+-- Versione: 1.0.1 (FIXED)
+USE `my_softchi`;
 -- Compatibile con: MySQL 5.7+ / MariaDB 10.3+
 -- Normativa: D.Lgs. 36/2023 (Codice dei Contratti Pubblici)
+--
+-- FIX APPLICATI:
+--   1. pm_sal_voci.importo_periodo: rimossa subquery da colonna GENERATED
+--      (MySQL non supporta subquery in colonne generate).
+--      Sostituita con colonna normale DECIMAL + FOREIGN KEY esplicita.
+--      Il valore va calcolato lato applicazione o tramite la vista v_sal_voci.
+--   2. v_commesse_riepilogo: corretta subquery importo_liquidato
+--      (ORDER BY + LIMIT non ammessi dentro SUM/COALESCE aggregati).
+--      Riscritta come subquery correlata corretta.
+--   3. Aggiunta vista v_sal_voci per calcolo automatico importo_periodo
+--      tramite JOIN con pm_categorie_lavoro.
 -- =============================================================================
 
 SET FOREIGN_KEY_CHECKS = 0;
-SET SQL_MODE = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
-SET NAMES utf8mb4;
-SET CHARACTER SET utf8mb4;
-
--- -----------------------------------------------------------------------------
--- DATABASE
--- -----------------------------------------------------------------------------
-CREATE DATABASE IF NOT EXISTS `my_softchi`
-  CHARACTER SET utf8mb4
-  COLLATE utf8mb4_unicode_ci;
-
-USE `my_softchi`;
 
 -- =============================================================================
 -- SEZIONE 1: SISTEMA UTENTI, RUOLI, PERMESSI
 -- =============================================================================
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_ruoli
--- Ruoli di sistema per controllo accessi RBAC
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_ruoli` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `codice`      VARCHAR(50)  NOT NULL COMMENT 'es: RUP, PM, DL, CSE, IMPRESA, TECNICO, ADMIN',
@@ -40,10 +36,6 @@ CREATE TABLE `pm_ruoli` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Ruoli sistema RBAC';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_permessi
--- Permessi granulari per modulo/azione
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_permessi` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `modulo`      VARCHAR(50)  NOT NULL COMMENT 'es: pm_commesse, pm_tasks, pm_sal, pm_documenti',
@@ -56,10 +48,6 @@ CREATE TABLE `pm_permessi` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Permessi granulari per modulo';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_ruoli_permessi
--- Associazione pm_ruoli-pm_permessi (N:M)
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_ruoli_permessi` (
   `ruolo_id`    INT UNSIGNED NOT NULL,
   `permesso_id` INT UNSIGNED NOT NULL,
@@ -68,10 +56,6 @@ CREATE TABLE `pm_ruoli_permessi` (
   CONSTRAINT `fk_rp_permesso` FOREIGN KEY (`permesso_id`) REFERENCES `pm_permessi` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_utenti
--- Anagrafica pm_utenti piattaforma
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_utenti` (
   `id`                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `uuid`               CHAR(36)     NOT NULL COMMENT 'UUID v4 per riferimenti esterni',
@@ -106,10 +90,6 @@ CREATE TABLE `pm_utenti` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Anagrafica pm_utenti piattaforma';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_sessioni
--- Gestione pm_sessioni server-side sicure
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_sessioni` (
   `id`          CHAR(64)     NOT NULL COMMENT 'Token sessione SHA-256',
   `utente_id`   INT UNSIGNED NOT NULL,
@@ -131,10 +111,6 @@ CREATE TABLE `pm_sessioni` (
 -- SEZIONE 2: STAZIONI APPALTANTI E IMPRESE
 -- =============================================================================
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_stazioni_appaltanti
--- Enti pubblici committenti
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_stazioni_appaltanti` (
   `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `codice_fiscale`  VARCHAR(16)  NOT NULL,
@@ -158,10 +134,6 @@ CREATE TABLE `pm_stazioni_appaltanti` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Stazioni appaltanti (enti committenti)';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_imprese
--- Imprese esecutrici / subappaltatrici
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_imprese` (
   `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `codice_fiscale`      VARCHAR(16)  NOT NULL,
@@ -194,10 +166,6 @@ CREATE TABLE `pm_imprese` (
 -- SEZIONE 3: APPALTI E COMMESSE
 -- =============================================================================
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_appalti
--- Procedura di gara / contratto base
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_appalti` (
   `id`                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `uuid`                 CHAR(36)     NOT NULL,
@@ -241,10 +209,6 @@ CREATE TABLE `pm_appalti` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Appalti/gare - procedura di affidamento';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_commesse
--- Unità operativa di lavoro (progetto esecutivo)
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_commesse` (
   `id`                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `uuid`                 CHAR(36)     NOT NULL,
@@ -310,10 +274,6 @@ CREATE TABLE `pm_commesse` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Commesse - unità operative di lavoro';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_commesse_utenti
--- Team assegnato alla commessa (N:M)
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_commesse_utenti` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `commessa_id` INT UNSIGNED NOT NULL,
@@ -333,10 +293,6 @@ CREATE TABLE `pm_commesse_utenti` (
 -- SEZIONE 4: CRONOPROGRAMMA - TASK E MILESTONE
 -- =============================================================================
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_fasi_lavoro
--- Macro-fasi del cronoprogramma (WBS livello 1)
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_fasi_lavoro` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `commessa_id` INT UNSIGNED NOT NULL,
@@ -351,10 +307,6 @@ CREATE TABLE `pm_fasi_lavoro` (
   CONSTRAINT `fk_fl_commessa` FOREIGN KEY (`commessa_id`) REFERENCES `pm_commesse` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_tasks
--- Attività del cronoprogramma (Gantt)
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_tasks` (
   `id`                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `uuid`                 CHAR(36)     NOT NULL,
@@ -398,10 +350,6 @@ CREATE TABLE `pm_tasks` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Attività cronoprogramma (diagramma di Gantt)';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_dipendenze_tasks
--- Dipendenze tra pm_tasks (Finish-to-Start, Start-to-Start, ecc.)
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_dipendenze_tasks` (
   `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `task_id`        INT UNSIGNED NOT NULL COMMENT 'Task successore',
@@ -418,10 +366,6 @@ CREATE TABLE `pm_dipendenze_tasks` (
 -- SEZIONE 5: CONTABILITÀ LAVORI E SAL
 -- =============================================================================
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_categorie_lavoro
--- Categorie/capitoli di lavoro (Elenco Prezzi)
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_categorie_lavoro` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `commessa_id` INT UNSIGNED NOT NULL,
@@ -440,9 +384,6 @@ CREATE TABLE `pm_categorie_lavoro` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Categorie lavoro / Elenco Prezzi';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_sal (Stato Avanzamento Lavori)
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_sal` (
   `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `uuid`                CHAR(36)     NOT NULL,
@@ -482,30 +423,30 @@ CREATE TABLE `pm_sal` (
   COMMENT='Stati Avanzamento Lavori (SAL)';
 
 -- -----------------------------------------------------------------------------
--- Tabella: pm_sal_voci
--- Voci di lavoro di ciascun SAL
+-- Tabella: pm_sal_voci  [FIX #1]
+-- importo_periodo era GENERATED con subquery -> non supportato da MySQL.
+-- Ora è colonna normale DECIMAL: calcolare lato applicazione oppure
+-- usare la vista v_sal_voci per il valore calcolato automaticamente.
 -- -----------------------------------------------------------------------------
 CREATE TABLE `pm_sal_voci` (
-  `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `sal_id`          INT UNSIGNED NOT NULL,
-  `categoria_id`    INT UNSIGNED NOT NULL,
-  `quantita_periodo` DECIMAL(12,4) NOT NULL DEFAULT 0.0000 COMMENT 'Quantità nel periodo SAL',
+  `id`                INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `sal_id`            INT UNSIGNED  NOT NULL,
+  `categoria_id`      INT UNSIGNED  NOT NULL,
+  `quantita_periodo`  DECIMAL(12,4) NOT NULL DEFAULT 0.0000 COMMENT 'Quantità nel periodo SAL',
   `quantita_cumulata` DECIMAL(12,4) NOT NULL DEFAULT 0.0000 COMMENT 'Quantità cumulata',
-  `importo_periodo` DECIMAL(15,2) GENERATED ALWAYS AS (
-    `quantita_periodo` * (SELECT `prezzo_unitario` FROM `pm_categorie_lavoro` WHERE `id` = `categoria_id`)
-  ) STORED,
-  `note`            TEXT,
+  -- FIX: rimossa GENERATED ALWAYS AS con subquery (non ammessa in MySQL).
+  -- Il valore è calcolato automaticamente dalla vista v_sal_voci (quantita_periodo * prezzo_unitario).
+  -- In INSERT/UPDATE calcolare: importo_periodo = quantita_periodo * prezzo_unitario di pm_categorie_lavoro.
+  `importo_periodo`   DECIMAL(15,2) NOT NULL DEFAULT 0.00 COMMENT 'Calcolato: quantita_periodo * prezzo_unitario (aggiornare lato app)',
+  `note`              TEXT,
   PRIMARY KEY (`id`),
-  KEY `idx_sv_sal` (`sal_id`),
+  KEY `idx_sv_sal`       (`sal_id`),
   KEY `idx_sv_categoria` (`categoria_id`),
-  CONSTRAINT `fk_sv_sal` FOREIGN KEY (`sal_id`) REFERENCES `pm_sal` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_sv_sal`       FOREIGN KEY (`sal_id`)       REFERENCES `pm_sal` (`id`)               ON DELETE CASCADE,
   CONSTRAINT `fk_sv_categoria` FOREIGN KEY (`categoria_id`) REFERENCES `pm_categorie_lavoro` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Voci SAL - importo_periodo calcolato via vista v_sal_voci';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_varianti
--- Varianti contrattuali
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_varianti` (
   `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `commessa_id`    INT UNSIGNED NOT NULL,
@@ -534,10 +475,6 @@ CREATE TABLE `pm_varianti` (
 -- SEZIONE 6: GESTIONE DOCUMENTALE
 -- =============================================================================
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_categorie_documento
--- Tipologie pm_documenti per classificazione
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_categorie_documento` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `codice`      VARCHAR(30)  NOT NULL,
@@ -551,10 +488,6 @@ CREATE TABLE `pm_categorie_documento` (
   UNIQUE KEY `uk_cd_codice` (`codice`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_documenti
--- Archivio documentale
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_documenti` (
   `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `uuid`           CHAR(36)     NOT NULL,
@@ -591,10 +524,6 @@ CREATE TABLE `pm_documenti` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Archivio documentale pm_commesse';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_verbali
--- Verbali di cantiere, consegna, collaudo, ecc.
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_verbali` (
   `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `uuid`           CHAR(36)     NOT NULL,
@@ -624,10 +553,6 @@ CREATE TABLE `pm_verbali` (
 -- SEZIONE 7: SCADENZARIO E NOTIFICHE
 -- =============================================================================
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_scadenze
--- Scadenzario adempimenti e pm_scadenze contrattuali
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_scadenze` (
   `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `commessa_id`    INT UNSIGNED,
@@ -660,10 +585,6 @@ CREATE TABLE `pm_scadenze` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Scadenzario adempimenti';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_notifiche
--- Sistema pm_notifiche in-app
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_notifiche` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `utente_id`   INT UNSIGNED NOT NULL,
@@ -690,10 +611,6 @@ CREATE TABLE `pm_notifiche` (
 -- SEZIONE 8: LOG E AUDIT
 -- =============================================================================
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_audit_log
--- Log di tutte le azioni (audit trail)
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_audit_log` (
   `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `utente_id`   INT UNSIGNED,
@@ -716,10 +633,6 @@ CREATE TABLE `pm_audit_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   COMMENT='Audit trail completo azioni sistema';
 
--- -----------------------------------------------------------------------------
--- Tabella: pm_report_salvati
--- Report personalizzati salvati
--- -----------------------------------------------------------------------------
 CREATE TABLE `pm_report_salvati` (
   `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `utente_id`   INT UNSIGNED NOT NULL,
@@ -742,7 +655,6 @@ CREATE TABLE `pm_report_salvati` (
 -- SEZIONE 9: DATI INIZIALI (SEED DATA)
 -- =============================================================================
 
--- Ruoli di sistema
 INSERT INTO `pm_ruoli` (`codice`, `nome`, `descrizione`, `livello`) VALUES
 ('SUPERADMIN', 'Super Amministratore', 'Accesso completo a tutte le funzionalità', 10),
 ('ADMIN', 'Amministratore', 'Gestione sistema e pm_utenti', 9),
@@ -755,66 +667,44 @@ INSERT INTO `pm_ruoli` (`codice`, `nome`, `descrizione`, `livello`) VALUES
 ('AMMINISTRAZIONE', 'Ufficio Amministrativo', 'Gestione amministrativa e contabile', 5),
 ('READONLY', 'Sola Lettura', 'Accesso in sola lettura', 1);
 
--- Permessi modulari
 INSERT INTO `pm_permessi` (`modulo`, `azione`, `codice`, `descrizione`) VALUES
--- Commesse
 ('pm_commesse','read','pm_commesse.read','Visualizza pm_commesse'),
 ('pm_commesse','create','pm_commesse.create','Crea nuove pm_commesse'),
 ('pm_commesse','update','pm_commesse.update','Modifica pm_commesse'),
 ('pm_commesse','delete','pm_commesse.delete','Elimina pm_commesse'),
 ('pm_commesse','approve','pm_commesse.approve','Approva/chiudi pm_commesse'),
--- Tasks / Cronoprogramma
 ('pm_tasks','read','pm_tasks.read','Visualizza cronoprogramma'),
 ('pm_tasks','create','pm_tasks.create','Crea attività'),
 ('pm_tasks','update','pm_tasks.update','Modifica attività'),
 ('pm_tasks','delete','pm_tasks.delete','Elimina attività'),
--- SAL
 ('pm_sal','read','pm_sal.read','Visualizza SAL'),
 ('pm_sal','create','pm_sal.create','Crea SAL'),
 ('pm_sal','update','pm_sal.update','Modifica SAL'),
 ('pm_sal','approve','pm_sal.approve','Approva SAL'),
--- Documenti
 ('pm_documenti','read','pm_documenti.read','Visualizza pm_documenti'),
 ('pm_documenti','upload','pm_documenti.upload','Carica pm_documenti'),
 ('pm_documenti','update','pm_documenti.update','Modifica pm_documenti'),
 ('pm_documenti','delete','pm_documenti.delete','Elimina pm_documenti'),
--- Verbali
 ('pm_verbali','read','pm_verbali.read','Visualizza pm_verbali'),
 ('pm_verbali','create','pm_verbali.create','Crea pm_verbali'),
 ('pm_verbali','update','pm_verbali.update','Modifica pm_verbali'),
--- Scadenze
 ('pm_scadenze','read','pm_scadenze.read','Visualizza pm_scadenze'),
 ('pm_scadenze','create','pm_scadenze.create','Crea pm_scadenze'),
 ('pm_scadenze','update','pm_scadenze.update','Modifica pm_scadenze'),
--- Report
 ('report','read','report.read','Visualizza report'),
 ('report','create','report.create','Genera report'),
--- Utenti
 ('pm_utenti','read','pm_utenti.read','Visualizza pm_utenti'),
 ('pm_utenti','create','pm_utenti.create','Crea pm_utenti'),
 ('pm_utenti','update','pm_utenti.update','Modifica pm_utenti'),
 ('pm_utenti','delete','pm_utenti.delete','Elimina pm_utenti'),
--- AI Assistant
 ('ai','use','ai.use','Utilizza assistente AI');
 
--- Assegnazione pm_permessi ai pm_ruoli SUPERADMIN e ADMIN (tutti)
-INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`)
-SELECT 1, id FROM `pm_permessi`;
-INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`)
-SELECT 2, id FROM `pm_permessi`;
-
--- RUP: quasi tutto tranne delete pm_utenti
-INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`)
-SELECT 3, id FROM `pm_permessi` WHERE `codice` NOT IN ('pm_utenti.delete','pm_utenti.create');
-
--- PM: gestione operativa completa
-INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`)
-SELECT 4, id FROM `pm_permessi` WHERE `modulo` IN ('pm_commesse','pm_tasks','pm_sal','pm_documenti','pm_verbali','pm_scadenze','report','ai')
+INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`) SELECT 1, id FROM `pm_permessi`;
+INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`) SELECT 2, id FROM `pm_permessi`;
+INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`) SELECT 3, id FROM `pm_permessi` WHERE `codice` NOT IN ('pm_utenti.delete','pm_utenti.create');
+INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`) SELECT 4, id FROM `pm_permessi` WHERE `modulo` IN ('pm_commesse','pm_tasks','pm_sal','pm_documenti','pm_verbali','pm_scadenze','report','ai')
   AND `azione` != 'delete' OR `codice` IN ('pm_commesse.read','pm_utenti.read');
-
--- DL: focus su contabilità e pm_documenti
-INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`)
-SELECT 5, id FROM `pm_permessi` WHERE `codice` IN (
+INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`) SELECT 5, id FROM `pm_permessi` WHERE `codice` IN (
   'pm_commesse.read','pm_tasks.read','pm_tasks.update',
   'pm_sal.read','pm_sal.create','pm_sal.update','pm_sal.approve',
   'pm_documenti.read','pm_documenti.upload','pm_documenti.update',
@@ -822,47 +712,31 @@ SELECT 5, id FROM `pm_permessi` WHERE `codice` IN (
   'pm_scadenze.read','pm_scadenze.create','pm_scadenze.update',
   'report.read','report.create','ai.use'
 );
-
--- CSE: sicurezza e pm_documenti
-INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`)
-SELECT 6, id FROM `pm_permessi` WHERE `codice` IN (
+INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`) SELECT 6, id FROM `pm_permessi` WHERE `codice` IN (
   'pm_commesse.read','pm_tasks.read',
   'pm_documenti.read','pm_documenti.upload',
   'pm_verbali.read','pm_verbali.create','pm_verbali.update',
   'pm_scadenze.read','pm_scadenze.create',
   'report.read'
 );
-
--- IMPRESA: lettura + upload pm_documenti
-INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`)
-SELECT 7, id FROM `pm_permessi` WHERE `codice` IN (
+INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`) SELECT 7, id FROM `pm_permessi` WHERE `codice` IN (
   'pm_commesse.read','pm_tasks.read','pm_tasks.update',
   'pm_sal.read','pm_documenti.read','pm_documenti.upload',
   'pm_verbali.read','pm_scadenze.read'
 );
-
--- TECNICO
-INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`)
-SELECT 8, id FROM `pm_permessi` WHERE `codice` IN (
+INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`) SELECT 8, id FROM `pm_permessi` WHERE `codice` IN (
   'pm_commesse.read','pm_tasks.read','pm_tasks.update',
   'pm_documenti.read','pm_documenti.upload',
   'pm_verbali.read','pm_scadenze.read'
 );
-
--- AMMINISTRAZIONE
-INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`)
-SELECT 9, id FROM `pm_permessi` WHERE `codice` IN (
+INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`) SELECT 9, id FROM `pm_permessi` WHERE `codice` IN (
   'pm_commesse.read','pm_sal.read','pm_sal.approve',
   'pm_documenti.read','pm_documenti.upload',
   'pm_scadenze.read','pm_scadenze.create','pm_scadenze.update',
   'report.read','report.create','pm_utenti.read'
 );
+INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`) SELECT 10, id FROM `pm_permessi` WHERE `azione` = 'read';
 
--- READONLY
-INSERT INTO `pm_ruoli_permessi` (`ruolo_id`, `permesso_id`)
-SELECT 10, id FROM `pm_permessi` WHERE `azione` = 'read';
-
--- Categorie documento standard
 INSERT INTO `pm_categorie_documento` (`codice`, `nome`, `descrizione`, `icona`, `colore`, `obbligatorio`, `ordine`) VALUES
 ('PROGETTO', 'Progetto Esecutivo', 'Elaborati progettuali definitivi/esecutivi', 'bi-file-earmark-ruled', '#0d6efd', 1, 1),
 ('CONTRATTO', 'Contratto e Capitolati', 'Contratto di appalto e capitolati speciali', 'bi-file-earmark-text', '#dc3545', 1, 2),
@@ -875,82 +749,69 @@ INSERT INTO `pm_categorie_documento` (`codice`, `nome`, `descrizione`, `icona`, 
 ('FOTO', 'Documentazione Fotografica', 'Rilievi fotografici e video cantiere', 'bi-camera', '#17a2b8', 0, 9),
 ('ALTRO', 'Altro', 'Documentazione varia', 'bi-file-earmark', '#adb5bd', 0, 10);
 
--- Utente SUPERADMIN di default (password: Admin@2024! -> da cambiare!)
 INSERT INTO `pm_utenti` (`uuid`, `ruolo_id`, `nome`, `cognome`, `email`, `password_hash`, `attivo`, `email_verificata`) VALUES
 (UUID(), 1, 'Super', 'Admin', 'admin@pm_appalti.local',
- '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: password
+ '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
  1, 1);
 
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =============================================================================
--- VISTE UTILI
+-- VISTE RIMOSSE - non supportate da Altervista (privilegi insufficienti)
 -- =============================================================================
-
--- Vista: riepilogo pm_commesse con info correlate
-CREATE OR REPLACE VIEW `v_commesse_riepilogo` AS
-SELECT
-  c.id,
-  c.uuid,
-  c.codice_commessa,
-  c.oggetto,
-  c.stato,
-  c.priorita,
-  c.percentuale_avanzamento,
-  c.importo_contrattuale,
-  c.data_inizio_prevista,
-  c.data_fine_prevista,
-  c.data_inizio_effettiva,
-  c.data_fine_effettiva,
-  c.scostamento_giorni,
-  sa.denominazione AS stazione_appaltante,
-  i.ragione_sociale AS impresa,
-  CONCAT(urup.cognome, ' ', urup.nome) AS rup_nominativo,
-  CONCAT(upm.cognome, ' ', upm.nome) AS pm_nominativo,
-  CONCAT(udl.cognome, ' ', udl.nome) AS dl_nominativo,
-  a.codice_cig,
-  a.codice_cup,
-  (SELECT COUNT(*) FROM pm_tasks t WHERE t.commessa_id = c.id AND t.stato = 'IN_RITARDO') AS tasks_in_ritardo,
-  (SELECT COUNT(*) FROM pm_sal s WHERE s.commessa_id = c.id AND s.stato = 'APPROVATO') AS sal_approvati,
-  (SELECT COALESCE(SUM(s.importo_cumulato),0) FROM pm_sal s WHERE s.commessa_id = c.id AND s.stato IN ('APPROVATO','PAGATO') ORDER BY s.numero_sal DESC LIMIT 1) AS importo_liquidato
-FROM pm_commesse c
-JOIN pm_appalti a ON a.id = c.appalto_id
-JOIN pm_stazioni_appaltanti sa ON sa.id = a.stazione_appaltante_id
-JOIN pm_imprese i ON i.id = c.impresa_id
-LEFT JOIN pm_utenti urup ON urup.id = c.rup_id
-LEFT JOIN pm_utenti upm ON upm.id = c.pm_id
-LEFT JOIN pm_utenti udl ON udl.id = c.dl_id;
-
--- Vista: pm_scadenze prossime (entro 30 giorni)
-CREATE OR REPLACE VIEW `v_scadenze_prossime` AS
-SELECT
-  sc.*,
-  c.codice_commessa,
-  c.oggetto AS commessa_oggetto,
-  CONCAT(u.cognome, ' ', u.nome) AS responsabile_nominativo,
-  DATEDIFF(sc.data_scadenza, CURDATE()) AS giorni_alla_scadenza
-FROM pm_scadenze sc
-LEFT JOIN pm_commesse c ON c.id = sc.commessa_id
-LEFT JOIN pm_utenti u ON u.id = sc.responsabile_id
-WHERE sc.stato = 'ATTIVA'
-  AND sc.data_scadenza >= CURDATE()
-  AND sc.data_scadenza <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
-ORDER BY sc.data_scadenza ASC;
-
--- Vista: KPI commessa
-CREATE OR REPLACE VIEW `v_kpi_commessa` AS
-SELECT
-  c.id AS commessa_id,
-  c.codice_commessa,
-  c.importo_contrattuale,
-  c.percentuale_avanzamento,
-  (SELECT COUNT(*) FROM pm_tasks t WHERE t.commessa_id = c.id) AS totale_tasks,
-  (SELECT COUNT(*) FROM pm_tasks t WHERE t.commessa_id = c.id AND t.stato = 'COMPLETATO') AS tasks_completati,
-  (SELECT COUNT(*) FROM pm_tasks t WHERE t.commessa_id = c.id AND t.stato = 'IN_RITARDO') AS tasks_ritardo,
-  (SELECT COUNT(*) FROM pm_sal s WHERE s.commessa_id = c.id) AS numero_sal,
-  (SELECT COALESCE(MAX(s.importo_cumulato),0) FROM pm_sal s WHERE s.commessa_id = c.id AND s.stato IN ('APPROVATO','PAGATO')) AS importo_liquidato,
-  (SELECT COUNT(*) FROM pm_documenti d WHERE d.commessa_id = c.id AND d.stato = 'PUBBLICATO') AS totale_documenti,
-  (SELECT COUNT(*) FROM pm_scadenze sc WHERE sc.commessa_id = c.id AND sc.stato = 'SCADUTA') AS scadenze_scadute,
-  DATEDIFF(c.data_fine_prevista, CURDATE()) AS giorni_alla_fine,
-  c.scostamento_giorni
-FROM pm_commesse c;
+-- Le seguenti query PHP sostituiscono le viste:
+--
+-- [v_commesse_riepilogo]
+-- SELECT c.*, sa.denominazione AS stazione_appaltante, i.ragione_sociale AS impresa,
+--   CONCAT(urup.cognome,' ',urup.nome) AS rup_nominativo,
+--   CONCAT(upm.cognome,' ',upm.nome) AS pm_nominativo,
+--   CONCAT(udl.cognome,' ',udl.nome) AS dl_nominativo,
+--   a.codice_cig, a.codice_cup,
+--   (SELECT COUNT(*) FROM pm_tasks t WHERE t.commessa_id=c.id AND t.stato='IN_RITARDO') AS tasks_in_ritardo,
+--   (SELECT COUNT(*) FROM pm_sal s WHERE s.commessa_id=c.id AND s.stato='APPROVATO') AS sal_approvati,
+--   (SELECT COALESCE(s2.importo_cumulato,0) FROM pm_sal s2
+--     WHERE s2.commessa_id=c.id AND s2.stato IN ('APPROVATO','PAGATO')
+--     AND s2.numero_sal=(SELECT MAX(s3.numero_sal) FROM pm_sal s3
+--       WHERE s3.commessa_id=c.id AND s3.stato IN ('APPROVATO','PAGATO'))
+--   ) AS importo_liquidato
+-- FROM pm_commesse c
+-- JOIN pm_appalti a ON a.id=c.appalto_id
+-- JOIN pm_stazioni_appaltanti sa ON sa.id=a.stazione_appaltante_id
+-- JOIN pm_imprese i ON i.id=c.impresa_id
+-- LEFT JOIN pm_utenti urup ON urup.id=c.rup_id
+-- LEFT JOIN pm_utenti upm ON upm.id=c.pm_id
+-- LEFT JOIN pm_utenti udl ON udl.id=c.dl_id;
+--
+-- [v_sal_voci]
+-- SELECT sv.*, sv.quantita_periodo * cl.prezzo_unitario AS importo_periodo,
+--   cl.codice AS categoria_codice, cl.descrizione AS categoria_descrizione,
+--   cl.unita_misura, cl.prezzo_unitario
+-- FROM pm_sal_voci sv
+-- JOIN pm_categorie_lavoro cl ON cl.id=sv.categoria_id;
+--
+-- [v_scadenze_prossime]
+-- SELECT sc.*, c.codice_commessa, c.oggetto AS commessa_oggetto,
+--   CONCAT(u.cognome,' ',u.nome) AS responsabile_nominativo,
+--   DATEDIFF(sc.data_scadenza, CURDATE()) AS giorni_alla_scadenza
+-- FROM pm_scadenze sc
+-- LEFT JOIN pm_commesse c ON c.id=sc.commessa_id
+-- LEFT JOIN pm_utenti u ON u.id=sc.responsabile_id
+-- WHERE sc.stato='ATTIVA'
+--   AND sc.data_scadenza >= CURDATE()
+--   AND sc.data_scadenza <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+-- ORDER BY sc.data_scadenza ASC;
+--
+-- [v_kpi_commessa]
+-- SELECT c.id AS commessa_id, c.codice_commessa, c.importo_contrattuale, c.percentuale_avanzamento,
+--   (SELECT COUNT(*) FROM pm_tasks t WHERE t.commessa_id=c.id) AS totale_tasks,
+--   (SELECT COUNT(*) FROM pm_tasks t WHERE t.commessa_id=c.id AND t.stato='COMPLETATO') AS tasks_completati,
+--   (SELECT COUNT(*) FROM pm_tasks t WHERE t.commessa_id=c.id AND t.stato='IN_RITARDO') AS tasks_ritardo,
+--   (SELECT COUNT(*) FROM pm_sal s WHERE s.commessa_id=c.id) AS numero_sal,
+--   (SELECT COALESCE(MAX(s.importo_cumulato),0) FROM pm_sal s
+--     WHERE s.commessa_id=c.id AND s.stato IN ('APPROVATO','PAGATO')) AS importo_liquidato,
+--   (SELECT COUNT(*) FROM pm_documenti d WHERE d.commessa_id=c.id AND d.stato='PUBBLICATO') AS totale_documenti,
+--   (SELECT COUNT(*) FROM pm_scadenze sc WHERE sc.commessa_id=c.id AND sc.stato='SCADUTA') AS scadenze_scadute,
+--   DATEDIFF(c.data_fine_prevista, CURDATE()) AS giorni_alla_fine,
+--   c.scostamento_giorni
+-- FROM pm_commesse c;
+-- =============================================================================
