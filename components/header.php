@@ -5,7 +5,7 @@
  *
  * Variabili attese (opzionali, da definire prima dell'include):
  *   $pageTitle   string  - Titolo pagina (es. "Dashboard")
- *   $activeMenu  string  - Voce menu attiva (es. "commesse")
+ *   $activeMenu  string  - Voce menu attiva (es. "pm_commesse")
  */
 if (!defined('APP_INIT')) { exit('Accesso negato'); }
 
@@ -15,14 +15,14 @@ $activeMenu     = $activeMenu ?? '';
 
 // Notifiche non lette (badge)
 $unreadNotifiche = (int)Database::fetchValue(
-    'SELECT COUNT(*) FROM notifiche WHERE utente_id = :uid AND letta = 0',
+    'SELECT COUNT(*) FROM pm_notifiche WHERE utente_id = :uid AND letta = 0',
     [':uid' => $user['id']]
 );
 
 // Scadenze urgenti (entro 7 giorni)
 $scadenzeUrgenti = (int)Database::fetchValue(
-    'SELECT COUNT(*) FROM scadenze sc
-     LEFT JOIN commesse c ON c.id = sc.commessa_id
+    'SELECT COUNT(*) FROM pm_scadenze sc
+     LEFT JOIN pm_commesse c ON c.id = sc.commessa_id
      WHERE sc.stato = "ATTIVA" AND sc.data_scadenza BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
      AND (sc.responsabile_id = :uid OR c.pm_id = :uid2 OR c.rup_id = :uid3)',
     [':uid' => $user['id'], ':uid2' => $user['id'], ':uid3' => $user['id']]
@@ -88,7 +88,7 @@ $scadenzeUrgenti = (int)Database::fetchValue(
 
       <!-- Scadenze urgenti -->
       <?php if ($scadenzeUrgenti > 0): ?>
-      <a href="<?= APP_URL ?>/pages/scadenze.php"
+      <a href="<?= APP_URL ?>/pages/pm_scadenze.php"
          class="btn btn-sm btn-warning position-relative me-1" title="Scadenze urgenti">
         <i class="bi bi-alarm"></i>
         <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle">
@@ -125,8 +125,8 @@ $scadenzeUrgenti = (int)Database::fetchValue(
             </div>
           </div>
           <div class="border-top px-3 py-2 text-center">
-            <a href="<?= APP_URL ?>/pages/notifiche.php" class="btn btn-link btn-sm">
-              Vedi tutte le notifiche
+            <a href="<?= APP_URL ?>/pages/pm_notifiche.php" class="btn btn-link btn-sm">
+              Vedi tutte le pm_notifiche
             </a>
           </div>
         </div>

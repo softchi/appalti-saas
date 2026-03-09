@@ -354,7 +354,7 @@ function generateCodiceCommessa(): string
     $anno   = date('Y');
     $ultimo = Database::fetchValue(
         "SELECT MAX(CAST(SUBSTRING(codice_commessa, -4) AS UNSIGNED))
-         FROM commesse WHERE codice_commessa LIKE :pattern",
+         FROM pm_commesse WHERE codice_commessa LIKE :pattern",
         [':pattern' => "CO-{$anno}-%"]
     );
     $numero = str_pad(((int)$ultimo + 1), 4, '0', STR_PAD_LEFT);
@@ -372,7 +372,7 @@ function generateCodiceCommessa(): string
  * @param string $subfolder   Sottocartella di destinazione
  * @return array              ['success' => bool, 'path' => string, 'name' => string, 'size' => int]
  */
-function uploadFile(array $file, string $subfolder = 'documenti'): array
+function uploadFile(array $file, string $subfolder = 'pm_documenti'): array
 {
     // Verifica errore PHP upload
     if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -515,7 +515,7 @@ class Logger
         string  $msg       = ''
     ): void {
         try {
-            Database::insert('audit_log', [
+            Database::insert('pm_audit_log', [
                 'utente_id'   => Auth::id(),
                 'azione'      => $azione,
                 'entita_tipo' => $entitaTipo,
@@ -550,7 +550,7 @@ function createNotification(
     ?int   $entitaId   = null
 ): void {
     try {
-        Database::insert('notifiche', [
+        Database::insert('pm_notifiche', [
             'utente_id'   => $utenteId,
             'tipo'        => $tipo,
             'titolo'      => $titolo,
@@ -570,18 +570,18 @@ function createNotification(
 function notifyCommessaTeam(int $commessaId, string $tipo, string $titolo, string $msg, string $link = ''): void
 {
     // Recupera team commessa
-    $utenti = Database::fetchAll(
-        'SELECT DISTINCT utente_id FROM commesse_utenti WHERE commessa_id = :id
+    $pm_utenti = Database::fetchAll(
+        'SELECT DISTINCT utente_id FROM pm_commesse_utenti WHERE commessa_id = :id
          UNION
-         SELECT rup_id FROM commesse WHERE id = :id2 AND rup_id IS NOT NULL
+         SELECT rup_id FROM pm_commesse WHERE id = :id2 AND rup_id IS NOT NULL
          UNION
-         SELECT pm_id FROM commesse WHERE id = :id3 AND pm_id IS NOT NULL
+         SELECT pm_id FROM pm_commesse WHERE id = :id3 AND pm_id IS NOT NULL
          UNION
-         SELECT dl_id FROM commesse WHERE id = :id4 AND dl_id IS NOT NULL',
+         SELECT dl_id FROM pm_commesse WHERE id = :id4 AND dl_id IS NOT NULL',
         [':id' => $commessaId, ':id2' => $commessaId, ':id3' => $commessaId, ':id4' => $commessaId]
     );
 
-    foreach ($utenti as $u) {
+    foreach ($pm_utenti as $u) {
         if ($u['utente_id'] && $u['utente_id'] != Auth::id()) {
             createNotification((int)$u['utente_id'], $tipo, $titolo, $msg, $link, 'commessa', $commessaId);
         }

@@ -2,7 +2,7 @@
 /**
  * APPALTI PUBBLICI SAAS - Sistema di Autenticazione
  *
- * Gestione login, sessioni server-side, CSRF, RBAC.
+ * Gestione login, pm_sessioni server-side, CSRF, RBAC.
  * Protezione brute-force con rate limiting.
  *
  * @version 1.0.0
@@ -21,7 +21,7 @@ class Auth
     // ==========================================================================
 
     /**
-     * Inizializza la gestione sessioni sicura
+     * Inizializza la gestione pm_sessioni sicura
      */
     public static function initSession(): void
     {
@@ -80,8 +80,8 @@ class Auth
         // Recupera utente dal DB
         $user = Database::fetchOne(
             'SELECT u.*, r.codice AS ruolo_codice, r.nome AS ruolo_nome, r.livello AS ruolo_livello
-             FROM utenti u
-             JOIN ruoli r ON r.id = u.ruolo_id
+             FROM pm_utenti u
+             JOIN pm_ruoli r ON r.id = u.ruolo_id
              WHERE u.email = :email AND u.attivo = 1',
             [':email' => $email]
         );
@@ -104,7 +104,7 @@ class Auth
         // Aggiorna password hash se necessario (password rehash)
         if (password_needs_rehash($user['password_hash'], PASSWORD_BCRYPT, ['cost' => PASSWORD_COST])) {
             $newHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => PASSWORD_COST]);
-            Database::update('utenti', ['password_hash' => $newHash], ['id' => $user['id']]);
+            Database::update('pm_utenti', ['password_hash' => $newHash], ['id' => $user['id']]);
         }
 
         // Crea token sessione
@@ -113,7 +113,7 @@ class Auth
         $scadeIl      = date('Y-m-d H:i:s', time() + SESSION_LIFETIME);
 
         // Persisti sessione nel DB
-        Database::insert('sessioni', [
+        Database::insert('pm_sessioni', [
             'id'         => $sessionToken,
             'utente_id'  => $user['id'],
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
@@ -123,7 +123,7 @@ class Auth
         ]);
 
         // Aggiorna ultimo accesso
-        Database::update('utenti', ['ultimo_accesso' => date('Y-m-d H:i:s')], ['id' => $user['id']]);
+        Database::update('pm_utenti', ['ultimo_accesso' => date('Y-m-d H:i:s')], ['id' => $user['id']]);
 
         // Salva in sessione PHP
         $_SESSION['session_token'] = $sessionToken;
@@ -144,13 +144,13 @@ class Auth
                     'samesite' => 'Strict',
                 ]
             );
-            Database::update('utenti', [
+            Database::update('pm_utenti', [
                 'token_reset' => hash('sha256', $rememberToken)
             ], ['id' => $user['id']]);
         }
 
         // Audit log
-        Logger::audit('LOGIN', 'utenti', $user['id'], null, null, 'OK');
+        Logger::audit('LOGIN', 'pm_utenti', $user['id'], null, null, 'OK');
 
         self::$currentUser  = self::sanitizeUser($user);
         self::$sessionToken = $sessionToken;
@@ -167,11 +167,11 @@ class Auth
 
         if (isset($_SESSION['session_token'])) {
             // Elimina sessione dal DB
-            Database::delete('sessioni', ['id' => $_SESSION['session_token']]);
+            Database::delete('pm_sessioni', ['id' => $_SESSION['session_token']]);
         }
 
         if (isset($_SESSION['user_id'])) {
-            Logger::audit('LOGOUT', 'utenti', $_SESSION['user_id'], null, null, 'OK');
+            Logger::audit('LOGOUT', 'pm_utenti', $_SESSION['user_id'], null, null, 'OK');
         }
 
         // Pulisci sessione PHP
@@ -195,8 +195,8 @@ class Auth
 
         // Verifica sessione nel DB
         $sessione = Database::fetchOne(
-            'SELECT s.*, u.attivo FROM sessioni s
-             JOIN utenti u ON u.id = s.utente_id
+            'SELECT s.*, u.attivo FROM pm_sessioni s
+             JOIN pm_utenti u ON u.id = s.utente_id
              WHERE s.id = :token AND s.utente_id = :uid AND s.scade_il > NOW() AND u.attivo = 1',
             [':token' => $_SESSION['session_token'], ':uid' => $_SESSION['user_id']]
         );
@@ -208,7 +208,7 @@ class Auth
 
         // Aggiorna last_activity
         Database::query(
-            'UPDATE sessioni SET last_activity = NOW() WHERE id = :id',
+            'UPDATE pm_sessioni SET last_activity = NOW() WHERE id = :id',
             [':id' => $_SESSION['session_token']]
         );
 
@@ -254,8 +254,8 @@ class Auth
 
         $user = Database::fetchOne(
             'SELECT u.*, r.codice AS ruolo_codice, r.nome AS ruolo_nome, r.livello AS ruolo_livello
-             FROM utenti u
-             JOIN ruoli r ON r.id = u.ruolo_id
+             FROM pm_utenti u
+             JOIN pm_ruoli r ON r.id = u.ruolo_id
              WHERE u.id = :id AND u.attivo = 1',
             [':id' => $_SESSION['user_id']]
         );
@@ -313,9 +313,9 @@ class Auth
 
         // Verifica se l'utente è nel team della commessa
         $count = Database::fetchValue(
-            'SELECT COUNT(*) FROM commesse_utenti WHERE commessa_id = :cid AND utente_id = :uid
+            'SELECT COUNT(*) FROM pm_commesse_utenti WHERE commessa_id = :cid AND utente_id = :uid
              UNION
-             SELECT COUNT(*) FROM commesse WHERE id = :cid2 AND (rup_id = :uid2 OR pm_id = :uid3 OR dl_id = :uid4 OR cse_id = :uid5)',
+             SELECT COUNT(*) FROM pm_commesse WHERE id = :cid2 AND (rup_id = :uid2 OR pm_id = :uid3 OR dl_id = :uid4 OR cse_id = :uid5)',
             [
                 ':cid' => $commessaId, ':uid' => $user['id'],
                 ':cid2' => $commessaId, ':uid2' => $user['id'],
@@ -389,7 +389,7 @@ class Auth
     public static function generateResetToken(string $email): ?string
     {
         $user = Database::fetchOne(
-            'SELECT id FROM utenti WHERE email = :email AND attivo = 1',
+            'SELECT id FROM pm_utenti WHERE email = :email AND attivo = 1',
             [':email' => strtolower(trim($email))]
         );
 
@@ -398,7 +398,7 @@ class Auth
         $token    = bin2hex(random_bytes(32));
         $scadeIl  = date('Y-m-d H:i:s', time() + TOKEN_RESET_EXPIRY);
 
-        Database::update('utenti', [
+        Database::update('pm_utenti', [
             'token_reset'       => hash('sha256', $token),
             'token_reset_scade' => $scadeIl,
         ], ['id' => $user['id']]);
@@ -420,7 +420,7 @@ class Auth
     }
 
     /**
-     * Recupera permessi utente (con cache in memoria)
+     * Recupera pm_permessi utente (con cache in memoria)
      */
     private static function getUserPermissions(): array
     {
@@ -432,9 +432,9 @@ class Auth
         if (!$userId) return [];
 
         $rows = Database::fetchAll(
-            'SELECT p.codice FROM permessi p
-             JOIN ruoli_permessi rp ON rp.permesso_id = p.id
-             JOIN utenti u ON u.ruolo_id = rp.ruolo_id
+            'SELECT p.codice FROM pm_permessi p
+             JOIN pm_ruoli_permessi rp ON rp.permesso_id = p.id
+             JOIN pm_utenti u ON u.ruolo_id = rp.ruolo_id
              WHERE u.id = :uid',
             [':uid' => $userId]
         );
@@ -449,7 +449,7 @@ class Auth
     private static function getRateLimitAttempts(string $key): int
     {
         $record = Database::fetchOne(
-            'SELECT COUNT(*) AS cnt FROM audit_log
+            'SELECT COUNT(*) AS cnt FROM pm_audit_log
              WHERE entita_tipo = :key AND azione = :azione AND esito = :esito
              AND created_at > DATE_SUB(NOW(), INTERVAL :sec SECOND)',
             [':key' => 'rate_limit', ':azione' => $key, ':esito' => 'RIFIUTATO', ':sec' => LOCKOUT_DURATION]
@@ -464,7 +464,7 @@ class Auth
 
     private static function incrementRateLimit(string $key): void
     {
-        Database::insert('audit_log', [
+        Database::insert('pm_audit_log', [
             'utente_id'   => null,
             'azione'      => $key,
             'entita_tipo' => 'rate_limit',

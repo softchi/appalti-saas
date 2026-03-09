@@ -5,13 +5,13 @@
 define('APP_INIT', true);
 require_once __DIR__ . '/../php/bootstrap.php';
 Auth::require();
-if (!Auth::can('utenti.read')) {
+if (!Auth::can('pm_utenti.read')) {
     header('Location: ' . APP_URL . '/pages/dashboard.php');
     exit;
 }
 
 $pageTitle  = 'Gestione Utenti';
-$activeMenu = 'utenti';
+$activeMenu = 'pm_utenti';
 include __DIR__ . '/../components/header.php';
 include __DIR__ . '/../components/sidebar.php';
 ?>
@@ -28,7 +28,7 @@ include __DIR__ . '/../components/sidebar.php';
         </ol>
       </nav>
     </div>
-    <?php if (Auth::can('utenti.create')): ?>
+    <?php if (Auth::can('pm_utenti.create')): ?>
     <button class="btn btn-primary" id="btnNuovoUtente">
       <i class="bi bi-person-plus me-2"></i>Nuovo Utente
     </button>
@@ -48,7 +48,7 @@ include __DIR__ . '/../components/sidebar.php';
         </div>
         <div class="col-6 col-md-2">
           <select class="form-select form-select-sm" id="filterRuolo">
-            <option value="">Tutti i ruoli</option>
+            <option value="">Tutti i pm_ruoli</option>
           </select>
         </div>
         <div class="col-6 col-md-2">
@@ -62,7 +62,7 @@ include __DIR__ . '/../components/sidebar.php';
     </div>
   </div>
 
-  <!-- Tabella utenti -->
+  <!-- Tabella pm_utenti -->
   <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -191,11 +191,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadRuoli() {
     try {
-        const res = await API.get('/api/utenti.php?action=ruoli');
-        const ruoli = res.data || [];
+        const res = await API.get('/api/pm_utenti.php?action=pm_ruoli');
+        const pm_ruoli = res.data || [];
         const selRuolo = document.getElementById('fRuolo');
         const filterRuolo = document.getElementById('filterRuolo');
-        ruoli.forEach(r => {
+        pm_ruoli.forEach(r => {
             const opt = `<option value="${r.id}">${escapeHtml(r.nome)}</option>`;
             selRuolo.insertAdjacentHTML('beforeend', opt);
             filterRuolo.insertAdjacentHTML('beforeend', opt);
@@ -217,12 +217,12 @@ async function loadUtenti(page = 1) {
     });
 
     try {
-        const res = await API.get('/api/utenti.php?' + params.toString());
+        const res = await API.get('/api/pm_utenti.php?' + params.toString());
         renderTable(res.data || []);
         const meta = res.meta || {};
         renderPagination(meta.current_page||1, meta.last_page||1, 'paginazione', loadUtenti);
         document.getElementById('paginationInfo').textContent =
-            `${meta.from??0}–${meta.to??0} di ${meta.total??0} utenti`;
+            `${meta.from??0}–${meta.to??0} di ${meta.total??0} pm_utenti`;
     } catch(e) {
         document.getElementById('utentiBody').innerHTML =
             `<tr><td colspan="7" class="text-danger text-center py-4">${escapeHtml(e.message)}</td></tr>`;
@@ -312,7 +312,7 @@ async function openEdit(id) {
     const modal = new bootstrap.Modal(document.getElementById('utenteModal'));
     modal.show();
     try {
-        const res = await API.get('/api/utenti.php?id=' + id);
+        const res = await API.get('/api/pm_utenti.php?id=' + id);
         const u = res.data;
         document.getElementById('utenteId').value = u.id;
         const form = document.getElementById('utenteForm');
@@ -336,10 +336,10 @@ async function salvaUtente() {
     UI.showLoader();
     try {
         if (data.id) {
-            await API.put('/api/utenti.php', data);
+            await API.put('/api/pm_utenti.php', data);
             UI.success('Utente aggiornato');
         } else {
-            await API.post('/api/utenti.php', data);
+            await API.post('/api/pm_utenti.php', data);
             UI.success('Utente creato. Password inviata via email.');
         }
         bootstrap.Modal.getInstance(document.getElementById('utenteModal')).hide();
@@ -357,7 +357,7 @@ async function toggleAttivo(id, attivo) {
     const ok = await UI.confirm(`Vuoi ${label} questo utente?`);
     if (!ok) return;
     try {
-        await API.put('/api/utenti.php', { id, attivo: newVal });
+        await API.put('/api/pm_utenti.php', { id, attivo: newVal });
         UI.success('Utente aggiornato');
         loadUtenti(currentPage);
     } catch(e) { UI.error(e.message); }
@@ -367,7 +367,7 @@ async function eliminaUtente(id, email) {
     const ok = await UI.confirm(`Eliminare definitivamente l'utente <strong>${escapeHtml(email)}</strong>?`);
     if (!ok) return;
     try {
-        await API.delete('/api/utenti.php', { id });
+        await API.delete('/api/pm_utenti.php', { id });
         UI.success('Utente eliminato');
         loadUtenti(currentPage);
     } catch(e) { UI.error(e.message); }

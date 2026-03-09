@@ -14,13 +14,13 @@ $id     = sanitizeInt($_GET['id'] ?? null, 1);
 
 switch ($method) {
     case 'GET':
-        if (!Auth::can('utenti.read')) jsonError('Permesso negato', 403);
+        if (!Auth::can('pm_utenti.read')) jsonError('Permesso negato', 403);
         if ($id) {
             $u = Database::fetchOne(
                 'SELECT u.id, u.uuid, u.nome, u.cognome, u.email, u.telefono, u.qualifica,
                         u.attivo, u.ultimo_accesso, u.created_at,
                         r.id AS ruolo_id, r.codice AS ruolo_codice, r.nome AS ruolo_nome
-                 FROM utenti u JOIN ruoli r ON r.id = u.ruolo_id WHERE u.id = :id',
+                 FROM pm_utenti u JOIN pm_ruoli r ON r.id = u.ruolo_id WHERE u.id = :id',
                 [':id' => $id]
             );
             if (!$u) jsonError('Utente non trovato', 404);
@@ -28,10 +28,10 @@ switch ($method) {
             jsonResponse(['utente' => $u]);
         }
 
-        // Lista utenti
+        // Lista pm_utenti
         $sql = 'SELECT u.id, u.nome, u.cognome, u.email, u.telefono, u.qualifica, u.attivo,
                        r.codice AS ruolo_codice, r.nome AS ruolo_nome, u.ultimo_accesso
-                FROM utenti u JOIN ruoli r ON r.id = u.ruolo_id WHERE 1=1';
+                FROM pm_utenti u JOIN pm_ruoli r ON r.id = u.ruolo_id WHERE 1=1';
         $params = [];
         if ($ruolo = sanitizeString($_GET['ruolo'] ?? '')) {
             $sql .= ' AND r.codice = :ruolo'; $params[':ruolo'] = $ruolo;
@@ -51,16 +51,16 @@ switch ($method) {
         if (get('dropdown', false, 'bool')) {
             $lista = Database::fetchAll(
                 'SELECT u.id, CONCAT(u.cognome, " ", u.nome) AS nome_completo, r.codice AS ruolo
-                 FROM utenti u JOIN ruoli r ON r.id = u.ruolo_id WHERE u.attivo = 1
+                 FROM pm_utenti u JOIN pm_ruoli r ON r.id = u.ruolo_id WHERE u.attivo = 1
                  ORDER BY u.cognome, u.nome'
             );
-            jsonResponse(['utenti' => $lista]);
+            jsonResponse(['pm_utenti' => $lista]);
         }
         jsonResponse($result);
         break;
 
     case 'POST':
-        if (!Auth::can('utenti.create')) jsonError('Permesso negato', 403);
+        if (!Auth::can('pm_utenti.create')) jsonError('Permesso negato', 403);
         Auth::requireCsrf();
         $body = !empty($_POST) ? $_POST : getJsonBody();
         $v = new Validator($body);
@@ -68,10 +68,10 @@ switch ($method) {
           ->required('email','Email')->email('email','Email')
           ->required('password','Password')->minLength('password', PASSWORD_MIN_LENGTH, 'Password')
           ->required('ruolo_id','Ruolo')
-          ->unique('email','utenti','email',null,'Email')
+          ->unique('email','pm_utenti','email',null,'Email')
           ->orFail();
 
-        $uid = Database::insert('utenti', [
+        $uid = Database::insert('pm_utenti', [
             'uuid'          => generateUUID(),
             'ruolo_id'      => (int)$body['ruolo_id'],
             'nome'          => sanitizeString($body['nome'], 100),
@@ -83,7 +83,7 @@ switch ($method) {
             'attivo'        => 1,
             'email_verificata' => 1,
         ]);
-        Logger::audit('CREATE', 'utenti', $uid);
+        Logger::audit('CREATE', 'pm_utenti', $uid);
         jsonSuccess('Utente creato', ['id' => $uid], 201);
         break;
 
@@ -91,10 +91,10 @@ switch ($method) {
         if (!$id) jsonError('ID richiesto', 400);
         $uid = Auth::id();
         // Un utente può modificare solo se stesso, oppure admin
-        if ($id != $uid && !Auth::can('utenti.update')) jsonError('Permesso negato', 403);
+        if ($id != $uid && !Auth::can('pm_utenti.update')) jsonError('Permesso negato', 403);
         Auth::requireCsrf();
         $body    = !empty($_POST) ? $_POST : getJsonBody();
-        $existing = Database::fetchOne('SELECT * FROM utenti WHERE id = :id', [':id' => $id]);
+        $existing = Database::fetchOne('SELECT * FROM pm_utenti WHERE id = :id', [':id' => $id]);
         if (!$existing) jsonError('Utente non trovato', 404);
         $upd = [];
         $allowedFields = ['nome','cognome','telefono','qualifica','ordine_professionale','numero_iscrizione'];
@@ -119,8 +119,8 @@ switch ($method) {
             $upd['password_hash'] = Auth::hashPassword($body['new_password']);
         }
         if (empty($upd)) jsonError('Nessun dato da aggiornare', 400);
-        Database::update('utenti', $upd, ['id' => $id]);
-        Logger::audit('UPDATE', 'utenti', $id);
+        Database::update('pm_utenti', $upd, ['id' => $id]);
+        Logger::audit('UPDATE', 'pm_utenti', $id);
         jsonSuccess('Utente aggiornato');
         break;
 

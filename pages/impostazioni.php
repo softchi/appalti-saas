@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnTestEmail')?.addEventListener('click', async () => {
         UI.showLoader();
         try {
-            await API.post('/api/utenti.php?action=test_email', {});
+            await API.post('/api/pm_utenti.php?action=test_email', {});
             UI.success('Email di test inviata');
         } catch(e) { UI.error(e.message); }
         finally { UI.hideLoader(); }
@@ -381,11 +381,11 @@ async function loadAuditLog() {
 
     try {
         const params = new URLSearchParams({
-            action: 'audit_log', per_page: 100,
+            action: 'pm_audit_log', per_page: 100,
             ...(azione && { azione }),
             ...(esito  && { esito }),
         });
-        const res = await API.get('/api/utenti.php?' + params.toString());
+        const res = await API.get('/api/pm_utenti.php?' + params.toString());
         const list = res.data || [];
         document.getElementById('logInfo').textContent = list.length + ' log trovati';
 

@@ -2,11 +2,11 @@
 /**
  * API REST: Gestione Commesse
  *
- * GET    /api/commesse.php          - Lista commesse (con filtri, paginazione)
- * GET    /api/commesse.php?id=N     - Dettaglio commessa
- * POST   /api/commesse.php          - Crea commessa
- * PUT    /api/commesse.php?id=N     - Aggiorna commessa
- * DELETE /api/commesse.php?id=N     - Elimina commessa (soft)
+ * GET    /api/pm_commesse.php          - Lista pm_commesse (con filtri, paginazione)
+ * GET    /api/pm_commesse.php?id=N     - Dettaglio commessa
+ * POST   /api/pm_commesse.php          - Crea commessa
+ * PUT    /api/pm_commesse.php?id=N     - Aggiorna commessa
+ * DELETE /api/pm_commesse.php?id=N     - Elimina commessa (soft)
  *
  * @version 1.0.0
  */
@@ -28,7 +28,7 @@ switch ($method) {
     // =========================================================================
     case 'GET':
     // =========================================================================
-        if (!Auth::can('commesse.read')) {
+        if (!Auth::can('pm_commesse.read')) {
             jsonError('Permesso negato', 403);
         }
 
@@ -36,7 +36,7 @@ switch ($method) {
             // Dettaglio singola commessa
             getCommessa($id);
         } else {
-            // Lista commesse
+            // Lista pm_commesse
             listCommesse();
         }
         break;
@@ -44,7 +44,7 @@ switch ($method) {
     // =========================================================================
     case 'POST':
     // =========================================================================
-        if (!Auth::can('commesse.create')) {
+        if (!Auth::can('pm_commesse.create')) {
             jsonError('Permesso negato', 403);
         }
         Auth::requireCsrf();
@@ -55,7 +55,7 @@ switch ($method) {
     case 'PUT':
     // =========================================================================
         if (!$id) jsonError('ID commessa richiesto', 400);
-        if (!Auth::can('commesse.update')) {
+        if (!Auth::can('pm_commesse.update')) {
             jsonError('Permesso negato', 403);
         }
         Auth::requireCsrf();
@@ -66,7 +66,7 @@ switch ($method) {
     case 'DELETE':
     // =========================================================================
         if (!$id) jsonError('ID commessa richiesto', 400);
-        if (!Auth::can('commesse.delete')) {
+        if (!Auth::can('pm_commesse.delete')) {
             jsonError('Permesso negato', 403);
         }
         Auth::requireCsrf();
@@ -98,22 +98,22 @@ function listCommesse(): never
                       CONCAT(urup.cognome, " ", urup.nome) AS rup_nome,
                       CONCAT(upm.cognome, " ", upm.nome) AS pm_nome,
                       CONCAT(udl.cognome, " ", udl.nome) AS dl_nome,
-                      (SELECT COUNT(*) FROM tasks t WHERE t.commessa_id = c.id AND t.stato = "IN_RITARDO") AS tasks_ritardo,
-                      (SELECT COUNT(*) FROM scadenze sc WHERE sc.commessa_id = c.id AND sc.stato = "SCADUTA") AS scadenze_scadute
-               FROM commesse c
-               JOIN appalti a ON a.id = c.appalto_id
-               JOIN stazioni_appaltanti sa ON sa.id = a.stazione_appaltante_id
-               JOIN imprese i ON i.id = c.impresa_id
-               LEFT JOIN utenti urup ON urup.id = c.rup_id
-               LEFT JOIN utenti upm ON upm.id = c.pm_id
-               LEFT JOIN utenti udl ON udl.id = c.dl_id
+                      (SELECT COUNT(*) FROM pm_tasks t WHERE t.commessa_id = c.id AND t.stato = "IN_RITARDO") AS tasks_ritardo,
+                      (SELECT COUNT(*) FROM pm_scadenze sc WHERE sc.commessa_id = c.id AND sc.stato = "SCADUTA") AS scadenze_scadute
+               FROM pm_commesse c
+               JOIN pm_appalti a ON a.id = c.appalto_id
+               JOIN pm_stazioni_appaltanti sa ON sa.id = a.stazione_appaltante_id
+               JOIN pm_imprese i ON i.id = c.impresa_id
+               LEFT JOIN pm_utenti urup ON urup.id = c.rup_id
+               LEFT JOIN pm_utenti upm ON upm.id = c.pm_id
+               LEFT JOIN pm_utenti udl ON udl.id = c.dl_id
                WHERE 1=1';
     $params = [];
 
-    // Filtra per ruolo: impresa/tecnico vedono solo le loro commesse
+    // Filtra per ruolo: impresa/tecnico vedono solo le loro pm_commesse
     if (!in_array($user['ruolo_codice'], ['SUPERADMIN', 'ADMIN', 'RUP', 'AMMINISTRAZIONE'])) {
         $sql .= ' AND (c.rup_id = :uid OR c.pm_id = :uid2 OR c.dl_id = :uid3 OR c.cse_id = :uid4
-                       OR EXISTS (SELECT 1 FROM commesse_utenti cu WHERE cu.commessa_id = c.id AND cu.utente_id = :uid5))';
+                       OR EXISTS (SELECT 1 FROM pm_commesse_utenti cu WHERE cu.commessa_id = c.id AND cu.utente_id = :uid5))';
         $params[':uid']  = $user['id'];
         $params[':uid2'] = $user['id'];
         $params[':uid3'] = $user['id'];
@@ -168,14 +168,14 @@ function getCommessa(int $id): never
                 CONCAT(upm.cognome, " ", upm.nome) AS pm_nome, upm.email AS pm_email,
                 CONCAT(udl.cognome, " ", udl.nome) AS dl_nome, udl.email AS dl_email,
                 CONCAT(ucse.cognome, " ", ucse.nome) AS cse_nome
-         FROM commesse c
-         JOIN appalti a ON a.id = c.appalto_id
-         JOIN stazioni_appaltanti sa ON sa.id = a.stazione_appaltante_id
-         JOIN imprese i ON i.id = c.impresa_id
-         LEFT JOIN utenti urup ON urup.id = c.rup_id
-         LEFT JOIN utenti upm ON upm.id = c.pm_id
-         LEFT JOIN utenti udl ON udl.id = c.dl_id
-         LEFT JOIN utenti ucse ON ucse.id = c.cse_id
+         FROM pm_commesse c
+         JOIN pm_appalti a ON a.id = c.appalto_id
+         JOIN pm_stazioni_appaltanti sa ON sa.id = a.stazione_appaltante_id
+         JOIN pm_imprese i ON i.id = c.impresa_id
+         LEFT JOIN pm_utenti urup ON urup.id = c.rup_id
+         LEFT JOIN pm_utenti upm ON upm.id = c.pm_id
+         LEFT JOIN pm_utenti udl ON udl.id = c.dl_id
+         LEFT JOIN pm_utenti ucse ON ucse.id = c.cse_id
          WHERE c.id = :id',
         [':id' => $id]
     );
@@ -187,9 +187,9 @@ function getCommessa(int $id): never
     // Team commessa
     $team = Database::fetchAll(
         'SELECT cu.*, CONCAT(u.cognome, " ", u.nome) AS nome_completo, u.email, u.qualifica, r.nome AS ruolo_nome
-         FROM commesse_utenti cu
-         JOIN utenti u ON u.id = cu.utente_id
-         JOIN ruoli r ON r.id = u.ruolo_id
+         FROM pm_commesse_utenti cu
+         JOIN pm_utenti u ON u.id = cu.utente_id
+         JOIN pm_ruoli r ON r.id = u.ruolo_id
          WHERE cu.commessa_id = :id',
         [':id' => $id]
     );
@@ -201,16 +201,16 @@ function getCommessa(int $id): never
     );
 
     // Ultimi SAL
-    $sal = Database::fetchAll(
+    $pm_sal = Database::fetchAll(
         'SELECT id, numero_sal, data_inizio, data_fine, importo_totale, stato
-         FROM sal WHERE commessa_id = :id ORDER BY numero_sal DESC LIMIT 5',
+         FROM pm_sal WHERE commessa_id = :id ORDER BY numero_sal DESC LIMIT 5',
         [':id' => $id]
     );
 
     // Scadenze prossime
-    $scadenze = Database::fetchAll(
+    $pm_scadenze = Database::fetchAll(
         'SELECT id, titolo, data_scadenza, tipo, priorita, stato
-         FROM scadenze WHERE commessa_id = :id AND stato = "ATTIVA"
+         FROM pm_scadenze WHERE commessa_id = :id AND stato = "ATTIVA"
          ORDER BY data_scadenza ASC LIMIT 5',
         [':id' => $id]
     );
@@ -221,8 +221,8 @@ function getCommessa(int $id): never
         'commessa' => $commessa,
         'team'     => $team,
         'kpi'      => $kpi,
-        'sal'      => $sal,
-        'scadenze' => $scadenze,
+        'pm_sal'      => $pm_sal,
+        'pm_scadenze' => $pm_scadenze,
     ]);
 }
 
@@ -243,10 +243,10 @@ function createCommessa(): never
       ->orFail();
 
     // Verifica che appalto e impresa esistano
-    $appalto = Database::fetchOne('SELECT id FROM appalti WHERE id = :id', [':id' => $body['appalto_id']]);
+    $appalto = Database::fetchOne('SELECT id FROM pm_appalti WHERE id = :id', [':id' => $body['appalto_id']]);
     if (!$appalto) jsonError('Appalto non trovato', 404);
 
-    $impresa = Database::fetchOne('SELECT id FROM imprese WHERE id = :id', [':id' => $body['impresa_id']]);
+    $impresa = Database::fetchOne('SELECT id FROM pm_imprese WHERE id = :id', [':id' => $body['impresa_id']]);
     if (!$impresa) jsonError('Impresa non trovata', 404);
 
     $codiceCommessa = generateCodiceCommessa();
@@ -281,12 +281,12 @@ function createCommessa(): never
 
     Database::beginTransaction();
     try {
-        $commessaId = Database::insert('commesse', $data);
+        $commessaId = Database::insert('pm_commesse', $data);
 
         // Aggiungi RUP/PM/DL al team
         foreach (['rup_id' => 'RUP', 'pm_id' => 'PM', 'dl_id' => 'DL', 'cse_id' => 'CSE'] as $field => $ruolo) {
             if (!empty($data[$field])) {
-                Database::insert('commesse_utenti', [
+                Database::insert('pm_commesse_utenti', [
                     'commessa_id'    => $commessaId,
                     'utente_id'      => $data[$field],
                     'ruolo_progetto' => $ruolo,
@@ -297,7 +297,7 @@ function createCommessa(): never
 
         Database::commit();
 
-        Logger::audit('CREATE', 'commesse', $commessaId, null, $data);
+        Logger::audit('CREATE', 'pm_commesse', $commessaId, null, $data);
         notifyCommessaTeam($commessaId, 'INFO',
             'Nuova commessa creata',
             "È stata creata la commessa: {$data['oggetto']}",
@@ -322,7 +322,7 @@ function updateCommessa(int $id): never
         jsonError('Accesso negato a questa commessa', 403);
     }
 
-    $existing = Database::fetchOne('SELECT * FROM commesse WHERE id = :id', [':id' => $id]);
+    $existing = Database::fetchOne('SELECT * FROM pm_commesse WHERE id = :id', [':id' => $id]);
     if (!$existing) jsonError('Commessa non trovata', 404);
 
     $body = !empty($_POST) ? $_POST : getJsonBody();
@@ -363,9 +363,9 @@ function updateCommessa(int $id): never
 
     $updateData['updated_by'] = Auth::id();
 
-    Database::update('commesse', $updateData, ['id' => $id]);
+    Database::update('pm_commesse', $updateData, ['id' => $id]);
 
-    Logger::audit('UPDATE', 'commesse', $id, $existing, $updateData);
+    Logger::audit('UPDATE', 'pm_commesse', $id, $existing, $updateData);
 
     jsonSuccess('Commessa aggiornata con successo', ['id' => $id]);
 }
@@ -373,23 +373,23 @@ function updateCommessa(int $id): never
 function deleteCommessa(int $id): never
 {
     $existing = Database::fetchOne(
-        'SELECT id, oggetto, stato FROM commesse WHERE id = :id',
+        'SELECT id, oggetto, stato FROM pm_commesse WHERE id = :id',
         [':id' => $id]
     );
     if (!$existing) jsonError('Commessa non trovata', 404);
 
-    // Non eliminare commesse in esecuzione
+    // Non eliminare pm_commesse in esecuzione
     if (in_array($existing['stato'], ['IN_ESECUZIONE', 'COMPLETATA', 'COLLAUDATA'])) {
         jsonError('Impossibile eliminare una commessa in esecuzione o completata', 409);
     }
 
     // Soft delete: aggiorna stato ad ANNULLATA
-    Database::update('commesse', [
+    Database::update('pm_commesse', [
         'stato'      => 'ANNULLATA',
         'updated_by' => Auth::id(),
     ], ['id' => $id]);
 
-    Logger::audit('DELETE', 'commesse', $id, $existing, ['stato' => 'ANNULLATA']);
+    Logger::audit('DELETE', 'pm_commesse', $id, $existing, ['stato' => 'ANNULLATA']);
     jsonSuccess('Commessa annullata con successo');
 }
 

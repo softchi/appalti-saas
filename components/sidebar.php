@@ -13,34 +13,34 @@ $menuItems = [
 
     ['type' => 'divider', 'label' => 'APPALTI & COMMESSE'],
 
-    ['id' => 'commesse', 'icon' => 'bi-briefcase-fill', 'label' => 'Commesse',
-     'url' => APP_URL . '/pages/commesse.php', 'perm' => 'commesse.read',
-     'badge_query' => "SELECT COUNT(*) FROM commesse WHERE stato = 'IN_ESECUZIONE'"],
+    ['id' => 'pm_commesse', 'icon' => 'bi-briefcase-fill', 'label' => 'Commesse',
+     'url' => APP_URL . '/pages/pm_commesse.php', 'perm' => 'pm_commesse.read',
+     'badge_query' => "SELECT COUNT(*) FROM pm_commesse WHERE stato = 'IN_ESECUZIONE'"],
 
     ['id' => 'cronoprogramma', 'icon' => 'bi-bar-chart-steps', 'label' => 'Cronoprogramma',
-     'url' => APP_URL . '/pages/cronoprogramma.php', 'perm' => 'tasks.read'],
+     'url' => APP_URL . '/pages/cronoprogramma.php', 'perm' => 'pm_tasks.read'],
 
     ['type' => 'divider', 'label' => 'CONTABILITÀ'],
 
-    ['id' => 'sal', 'icon' => 'bi-receipt-cutoff', 'label' => 'S.A.L.',
-     'url' => APP_URL . '/pages/sal.php', 'perm' => 'sal.read'],
+    ['id' => 'pm_sal', 'icon' => 'bi-receipt-cutoff', 'label' => 'S.A.L.',
+     'url' => APP_URL . '/pages/pm_sal.php', 'perm' => 'pm_sal.read'],
 
     ['id' => 'contabilita', 'icon' => 'bi-currency-euro', 'label' => 'Contabilità Lavori',
-     'url' => APP_URL . '/pages/contabilita.php', 'perm' => 'sal.read'],
+     'url' => APP_URL . '/pages/contabilita.php', 'perm' => 'pm_sal.read'],
 
     ['type' => 'divider', 'label' => 'DOCUMENTI & VERBALI'],
 
-    ['id' => 'documenti', 'icon' => 'bi-folder2-open', 'label' => 'Documentale',
-     'url' => APP_URL . '/pages/documenti.php', 'perm' => 'documenti.read'],
+    ['id' => 'pm_documenti', 'icon' => 'bi-folder2-open', 'label' => 'Documentale',
+     'url' => APP_URL . '/pages/pm_documenti.php', 'perm' => 'pm_documenti.read'],
 
-    ['id' => 'verbali', 'icon' => 'bi-journal-check', 'label' => 'Verbali',
-     'url' => APP_URL . '/pages/verbali.php', 'perm' => 'verbali.read'],
+    ['id' => 'pm_verbali', 'icon' => 'bi-journal-check', 'label' => 'Verbali',
+     'url' => APP_URL . '/pages/pm_verbali.php', 'perm' => 'pm_verbali.read'],
 
     ['type' => 'divider', 'label' => 'PIANIFICAZIONE'],
 
-    ['id' => 'scadenze', 'icon' => 'bi-calendar-event-fill', 'label' => 'Scadenzario',
-     'url' => APP_URL . '/pages/scadenze.php', 'perm' => 'scadenze.read',
-     'badge_query' => "SELECT COUNT(*) FROM scadenze WHERE stato = 'ATTIVA' AND data_scadenza < CURDATE()",
+    ['id' => 'pm_scadenze', 'icon' => 'bi-calendar-event-fill', 'label' => 'Scadenzario',
+     'url' => APP_URL . '/pages/pm_scadenze.php', 'perm' => 'pm_scadenze.read',
+     'badge_query' => "SELECT COUNT(*) FROM pm_scadenze WHERE stato = 'ATTIVA' AND data_scadenza < CURDATE()",
      'badge_class' => 'bg-danger'],
 
     ['type' => 'divider', 'label' => 'ANALISI & REPORT'],
@@ -53,8 +53,8 @@ $menuItems = [
 
     ['type' => 'divider', 'label' => 'AMMINISTRAZIONE', 'only_roles' => ['SUPERADMIN','ADMIN','RUP']],
 
-    ['id' => 'utenti', 'icon' => 'bi-people-fill', 'label' => 'Utenti',
-     'url' => APP_URL . '/pages/utenti.php', 'perm' => 'utenti.read',
+    ['id' => 'pm_utenti', 'icon' => 'bi-people-fill', 'label' => 'Utenti',
+     'url' => APP_URL . '/pages/pm_utenti.php', 'perm' => 'pm_utenti.read',
      'only_roles' => ['SUPERADMIN','ADMIN']],
 
     ['id' => 'impostazioni', 'icon' => 'bi-gear-fill', 'label' => 'Impostazioni',

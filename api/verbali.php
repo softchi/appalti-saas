@@ -21,7 +21,7 @@ try {
         default                            => jsonError('Metodo non supportato', 405),
     };
 } catch (Exception $e) {
-    Logger::audit('ERROR', 'verbali', null, 'RIFIUTATO', $e->getMessage());
+    Logger::audit('ERROR', 'pm_verbali', null, 'RIFIUTATO', $e->getMessage());
     jsonError($e->getMessage(), 500);
 }
 
@@ -43,12 +43,12 @@ function listVerbali(): void {
     $where  = ['1=1'];
     $params = [];
 
-    // RBAC – non-admin vedono solo le proprie commesse
-    if (!Auth::can('verbali.read_all')) {
+    // RBAC – non-admin vedono solo le proprie pm_commesse
+    if (!Auth::can('pm_verbali.read_all')) {
         $where[] = 'v.commessa_id IN (
-            SELECT id FROM commesse WHERE rup_id=:uid1 OR pm_id=:uid2 OR dl_id=:uid3 OR cse_id=:uid4
+            SELECT id FROM pm_commesse WHERE rup_id=:uid1 OR pm_id=:uid2 OR dl_id=:uid3 OR cse_id=:uid4
             UNION
-            SELECT commessa_id FROM commesse_utenti WHERE utente_id=:uid5
+            SELECT commessa_id FROM pm_commesse_utenti WHERE utente_id=:uid5
         )';
         $uid = Auth::id();
         $params += [':uid1'=>$uid,':uid2'=>$uid,':uid3'=>$uid,':uid4'=>$uid,':uid5'=>$uid];
@@ -80,9 +80,9 @@ function listVerbali(): void {
     ];
     $orderBy = $orderMap[$sort] ?? 'v.data_verbale DESC';
 
-    $base = 'FROM verbali v
-             JOIN commesse c ON c.id = v.commessa_id
-             LEFT JOIN utenti u ON u.id = v.redatto_da
+    $base = 'FROM pm_verbali v
+             JOIN pm_commesse c ON c.id = v.commessa_id
+             LEFT JOIN pm_utenti u ON u.id = v.redatto_da
              WHERE ' . implode(' AND ', $where);
 
     $total = Database::fetchValue("SELECT COUNT(*) $base", $params);
@@ -114,9 +114,9 @@ function getVerbale(int $id): void {
     $v = Database::fetchOne(
         'SELECT v.*, c.codice_commessa, c.oggetto AS commessa_oggetto, c.id AS commessa_id,
                 CONCAT(u.cognome," ",u.nome) AS redattore_nome
-         FROM verbali v
-         JOIN commesse c ON c.id = v.commessa_id
-         LEFT JOIN utenti u ON u.id = v.redatto_da
+         FROM pm_verbali v
+         JOIN pm_commesse c ON c.id = v.commessa_id
+         LEFT JOIN pm_utenti u ON u.id = v.redatto_da
          WHERE v.id = :id',
         [':id' => $id]
     );
@@ -129,7 +129,7 @@ function getVerbale(int $id): void {
 // ============================================================
 function createVerbale(): void {
     Auth::requireCsrf();
-    Auth::require('verbali.create');
+    Auth::require('pm_verbali.create');
 
     $data = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -145,13 +145,13 @@ function createVerbale(): void {
     $commessaId = (int)$data['commessa_id'];
     if (empty($data['numero_verbale'])) {
         $max = Database::fetchValue(
-            'SELECT MAX(numero_verbale) FROM verbali WHERE commessa_id=:cid',
+            'SELECT MAX(numero_verbale) FROM pm_verbali WHERE commessa_id=:cid',
             [':cid' => $commessaId]
         );
         $data['numero_verbale'] = ($max ?? 0) + 1;
     }
 
-    $insertId = Database::insert('verbali', [
+    $insertId = Database::insert('pm_verbali', [
         'commessa_id'    => $commessaId,
         'tipo'           => sanitizeString($data['tipo']),
         'oggetto'        => sanitizeString($data['oggetto']),
@@ -168,13 +168,13 @@ function createVerbale(): void {
         'redatto_da'     => Auth::id(),
     ]);
 
-    Logger::audit('CREATE', 'verbali', $insertId, 'SUCCESSO');
+    Logger::audit('CREATE', 'pm_verbali', $insertId, 'SUCCESSO');
 
     // Notifica team
     createNotification(
         'VERBALE',
         'Nuovo verbale: ' . sanitizeString($data['oggetto']),
-        '/api/verbali.php?id=' . $insertId,
+        '/api/pm_verbali.php?id=' . $insertId,
         null,
         $commessaId
     );
@@ -187,13 +187,13 @@ function createVerbale(): void {
 // ============================================================
 function updateVerbale(): void {
     Auth::requireCsrf();
-    Auth::require('verbali.update');
+    Auth::require('pm_verbali.update');
 
     $data = json_decode(file_get_contents('php://input'), true) ?? [];
     $id   = (int)($data['id'] ?? 0);
     if (!$id) jsonError('ID mancante', 400);
 
-    $existing = Database::fetchOne('SELECT id,commessa_id FROM verbali WHERE id=:id', [':id'=>$id]);
+    $existing = Database::fetchOne('SELECT id,commessa_id FROM pm_verbali WHERE id=:id', [':id'=>$id]);
     if (!$existing) jsonError('Verbale non trovato', 404);
 
     $allowed = [
@@ -209,8 +209,8 @@ function updateVerbale(): void {
     }
     if (empty($update)) jsonError('Nessun dato da aggiornare', 400);
 
-    Database::update('verbali', $update, ['id' => $id]);
-    Logger::audit('UPDATE', 'verbali', $id, 'SUCCESSO');
+    Database::update('pm_verbali', $update, ['id' => $id]);
+    Logger::audit('UPDATE', 'pm_verbali', $id, 'SUCCESSO');
     jsonSuccess(null, [], 'Verbale aggiornato');
 }
 
@@ -219,16 +219,16 @@ function updateVerbale(): void {
 // ============================================================
 function deleteVerbale(): void {
     Auth::requireCsrf();
-    Auth::require('verbali.delete');
+    Auth::require('pm_verbali.delete');
 
     $data = json_decode(file_get_contents('php://input'), true) ?? [];
     $id   = (int)($data['id'] ?? get('id','int',0));
     if (!$id) jsonError('ID mancante', 400);
 
-    $existing = Database::fetchOne('SELECT id FROM verbali WHERE id=:id', [':id'=>$id]);
+    $existing = Database::fetchOne('SELECT id FROM pm_verbali WHERE id=:id', [':id'=>$id]);
     if (!$existing) jsonError('Verbale non trovato', 404);
 
-    Database::delete('verbali', ['id' => $id]);
-    Logger::audit('DELETE', 'verbali', $id, 'SUCCESSO');
+    Database::delete('pm_verbali', ['id' => $id]);
+    Logger::audit('DELETE', 'pm_verbali', $id, 'SUCCESSO');
     jsonSuccess(null, [], 'Verbale eliminato');
 }

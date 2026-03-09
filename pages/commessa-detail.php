@@ -5,14 +5,14 @@
 define('APP_INIT', true);
 require_once __DIR__ . '/../php/bootstrap.php';
 Auth::require();
-if (!Auth::can('commesse.read')) {
+if (!Auth::can('pm_commesse.read')) {
     header('Location: ' . APP_URL . '/pages/dashboard.php');
     exit;
 }
 
 $commessaId = sanitizeInt($_GET['id'] ?? null, 1);
 if (!$commessaId) {
-    header('Location: ' . APP_URL . '/pages/commesse.php');
+    header('Location: ' . APP_URL . '/pages/pm_commesse.php');
     exit;
 }
 
@@ -22,19 +22,19 @@ $commessa = Database::fetchOne(
             c.importo_contrattuale, c.data_fine_prevista, c.scostamento_giorni,
             c.cig, c.cup, c.data_consegna,
             CONCAT(rup.cognome," ",rup.nome) AS rup_nominativo
-     FROM commesse c
-     LEFT JOIN utenti rup ON rup.id = c.rup_id
+     FROM pm_commesse c
+     LEFT JOIN pm_utenti rup ON rup.id = c.rup_id
      WHERE c.id = :id',
     [':id' => $commessaId]
 );
 
 if (!$commessa) {
-    header('Location: ' . APP_URL . '/pages/commesse.php');
+    header('Location: ' . APP_URL . '/pages/pm_commesse.php');
     exit;
 }
 
 $pageTitle  = $commessa['codice_commessa'] . ' — ' . mb_substr($commessa['oggetto'], 0, 50);
-$activeMenu = 'commesse';
+$activeMenu = 'pm_commesse';
 $extraScripts = ['js/charts.js', 'js/gantt.js'];
 include __DIR__ . '/../components/header.php';
 include __DIR__ . '/../components/sidebar.php';
@@ -48,7 +48,7 @@ include __DIR__ . '/../components/sidebar.php';
       <nav aria-label="breadcrumb">
         <ol class="breadcrumb mb-1 small">
           <li class="breadcrumb-item"><a href="<?= APP_URL ?>/pages/dashboard.php">Dashboard</a></li>
-          <li class="breadcrumb-item"><a href="<?= APP_URL ?>/pages/commesse.php">Commesse</a></li>
+          <li class="breadcrumb-item"><a href="<?= APP_URL ?>/pages/pm_commesse.php">Commesse</a></li>
           <li class="breadcrumb-item active"><?= e($commessa['codice_commessa']) ?></li>
         </ol>
       </nav>
@@ -65,7 +65,7 @@ include __DIR__ . '/../components/sidebar.php';
       </small>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-      <?php if (Auth::can('commesse.update')): ?>
+      <?php if (Auth::can('pm_commesse.update')): ?>
       <button class="btn btn-outline-secondary btn-sm" id="btnEditCommessa">
         <i class="bi bi-pencil me-1"></i>Modifica
       </button>
@@ -74,11 +74,11 @@ include __DIR__ . '/../components/sidebar.php';
          class="btn btn-outline-primary btn-sm">
         <i class="bi bi-bar-chart-steps me-1"></i>Cronoprogramma
       </a>
-      <a href="<?= APP_URL ?>/pages/sal.php?commessa_id=<?= $commessaId ?>"
+      <a href="<?= APP_URL ?>/pages/pm_sal.php?commessa_id=<?= $commessaId ?>"
          class="btn btn-outline-success btn-sm">
         <i class="bi bi-receipt-cutoff me-1"></i>SAL
       </a>
-      <a href="<?= APP_URL ?>/pages/documenti.php?commessa_id=<?= $commessaId ?>"
+      <a href="<?= APP_URL ?>/pages/pm_documenti.php?commessa_id=<?= $commessaId ?>"
          class="btn btn-outline-info btn-sm">
         <i class="bi bi-folder2-open me-1"></i>Documenti
       </a>
@@ -284,7 +284,7 @@ include __DIR__ . '/../components/sidebar.php';
           <div class="card border-0 shadow-sm">
             <div class="card-header bg-white fw-semibold border-bottom-0 pb-0 d-flex justify-content-between">
               Prossime Scadenze
-              <a href="<?= APP_URL ?>/pages/scadenze.php?commessa_id=<?= $commessaId ?>"
+              <a href="<?= APP_URL ?>/pages/pm_scadenze.php?commessa_id=<?= $commessaId ?>"
                  class="btn btn-link btn-sm p-0 small">Vedi tutte</a>
             </div>
             <div class="card-body p-0">
@@ -311,7 +311,7 @@ include __DIR__ . '/../components/sidebar.php';
     <div class="tab-pane fade" id="tabTasks">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="mb-0 fw-semibold">Tasks della Commessa</h6>
-        <?php if (Auth::can('tasks.create')): ?>
+        <?php if (Auth::can('pm_tasks.create')): ?>
         <a href="<?= APP_URL ?>/pages/cronoprogramma.php?commessa_id=<?= $commessaId ?>"
            class="btn btn-primary btn-sm">
           <i class="bi bi-bar-chart-steps me-1"></i>Apri Cronoprogramma
@@ -348,7 +348,7 @@ include __DIR__ . '/../components/sidebar.php';
     <div class="tab-pane fade" id="tabSal">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="mb-0 fw-semibold">Stato Avanzamento Lavori</h6>
-        <a href="<?= APP_URL ?>/pages/sal.php?commessa_id=<?= $commessaId ?>"
+        <a href="<?= APP_URL ?>/pages/pm_sal.php?commessa_id=<?= $commessaId ?>"
            class="btn btn-success btn-sm">
           <i class="bi bi-receipt-cutoff me-1"></i>Gestisci SAL
         </a>
@@ -383,7 +383,7 @@ include __DIR__ . '/../components/sidebar.php';
     <div class="tab-pane fade" id="tabScadenze">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="mb-0 fw-semibold">Scadenze</h6>
-        <a href="<?= APP_URL ?>/pages/scadenze.php?commessa_id=<?= $commessaId ?>"
+        <a href="<?= APP_URL ?>/pages/pm_scadenze.php?commessa_id=<?= $commessaId ?>"
            class="btn btn-outline-primary btn-sm">
           <i class="bi bi-calendar-plus me-1"></i>Gestisci Scadenze
         </a>
@@ -425,8 +425,8 @@ include __DIR__ . '/../components/sidebar.php';
     <!-- ===== TAB DOCUMENTI ===== -->
     <div class="tab-pane fade" id="tabDocs">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="mb-0 fw-semibold">Ultimi documenti</h6>
-        <a href="<?= APP_URL ?>/pages/documenti.php?commessa_id=<?= $commessaId ?>"
+        <h6 class="mb-0 fw-semibold">Ultimi pm_documenti</h6>
+        <a href="<?= APP_URL ?>/pages/pm_documenti.php?commessa_id=<?= $commessaId ?>"
            class="btn btn-outline-primary btn-sm">
           <i class="bi bi-folder2-open me-1"></i>Archivio Completo
         </a>
@@ -469,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
 async function loadRiepilogo() {
     try {
-        const res = await API.get('/api/commesse.php?id=' + COMMESSA_ID);
+        const res = await API.get('/api/pm_commesse.php?id=' + COMMESSA_ID);
         const c   = res.data;
         // KPI
         document.getElementById('kpiImporto').textContent  = Format.euro(c.importo_contrattuale);
@@ -535,7 +535,7 @@ function renderTasksStato(stats) {
 
 async function loadSalKpi() {
     try {
-        const res = await API.get('/api/sal.php?commessa_id=' + COMMESSA_ID + '&per_page=20');
+        const res = await API.get('/api/pm_sal.php?commessa_id=' + COMMESSA_ID + '&per_page=20');
         const list = res.data || [];
         const meta = res.meta || {};
         document.getElementById('kpiLiquidato').textContent =
@@ -548,7 +548,7 @@ async function loadSalKpi() {
 
 async function loadProssimeScadenze() {
     try {
-        const res = await API.get('/api/scadenze.php?commessa_id=' + COMMESSA_ID + '&per_page=5&sort=data_scadenza');
+        const res = await API.get('/api/pm_scadenze.php?commessa_id=' + COMMESSA_ID + '&per_page=5&sort=data_scadenza');
         const items = res.data || [];
         const ul = document.getElementById('prossimeScadenze');
         if (!items.length) {
@@ -582,13 +582,13 @@ async function loadProssimeScadenze() {
 async function loadTasks() {
     const tbody = document.getElementById('tasksBody');
     try {
-        const res = await API.get('/api/tasks.php?commessa_id=' + COMMESSA_ID);
-        const tasks = flattenTree(res.data || []);
-        if (!tasks.length) {
+        const res = await API.get('/api/pm_tasks.php?commessa_id=' + COMMESSA_ID);
+        const pm_tasks = flattenTree(res.data || []);
+        if (!pm_tasks.length) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Nessun task</td></tr>';
             return;
         }
-        tbody.innerHTML = tasks.map(t => {
+        tbody.innerHTML = pm_tasks.map(t => {
             const indent = '&nbsp;'.repeat(t._depth * 4);
             const icon = t.tipo === 'MILESTONE' ? 'bi-diamond-fill text-warning' :
                          t.tipo === 'FASE' ? 'bi-folder-fill text-primary' : 'bi-check2-square';
@@ -625,7 +625,7 @@ function flattenTree(nodes, depth = 0) {
 async function loadSalTab() {
     const tbody = document.getElementById('salBody');
     try {
-        const res = await API.get('/api/sal.php?commessa_id=' + COMMESSA_ID + '&per_page=50');
+        const res = await API.get('/api/pm_sal.php?commessa_id=' + COMMESSA_ID + '&per_page=50');
         const list = res.data || [];
         if (!list.length) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Nessun SAL</td></tr>';
@@ -648,7 +648,7 @@ async function loadSalTab() {
 async function loadScadenzeTab() {
     const tbody = document.getElementById('scadenzeBody');
     try {
-        const res = await API.get('/api/scadenze.php?commessa_id=' + COMMESSA_ID + '&per_page=50');
+        const res = await API.get('/api/pm_scadenze.php?commessa_id=' + COMMESSA_ID + '&per_page=50');
         const list = res.data || [];
         if (!list.length) {
             tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Nessuna scadenza</td></tr>';
@@ -672,7 +672,7 @@ async function loadScadenzeTab() {
 async function loadTeam() {
     const grid = document.getElementById('teamGrid');
     try {
-        const res = await API.get('/api/commesse.php?id=' + COMMESSA_ID + '&include=team');
+        const res = await API.get('/api/pm_commesse.php?id=' + COMMESSA_ID + '&include=team');
         const members = res.team || [];
         if (!members.length) {
             grid.innerHTML = '<div class="col-12 text-muted text-center py-4">Nessun membro nel team</div>';
@@ -698,7 +698,7 @@ async function loadTeam() {
 async function loadDocs() {
     const grid = document.getElementById('docsGrid');
     try {
-        const res = await API.get('/api/documenti.php?commessa_id=' + COMMESSA_ID + '&per_page=12');
+        const res = await API.get('/api/pm_documenti.php?commessa_id=' + COMMESSA_ID + '&per_page=12');
         const list = res.data || [];
         if (!list.length) {
             grid.innerHTML = '<div class="col-12 text-muted text-center py-4">Nessun documento</div>';
@@ -711,7 +711,7 @@ async function loadDocs() {
             const iconKey = ext === 'pdf' ? 'pdf' : ['doc','docx'].includes(ext) ? 'doc' :
                 ['xls','xlsx'].includes(ext) ? 'xls' : ['jpg','png','gif'].includes(ext) ? 'img' : 'default';
             return `<div class="col-6 col-md-4 col-lg-2">
-                <a href="${API.getAppUrl()}/api/documenti.php?action=download&id=${d.id}"
+                <a href="${API.getAppUrl()}/api/pm_documenti.php?action=download&id=${d.id}"
                    class="card border-0 shadow-sm text-center p-3 text-decoration-none h-100" target="_blank">
                     <i class="bi ${iconMap[iconKey]} fs-2 mb-2"></i>
                     <small class="text-dark fw-semibold text-truncate d-block">${escapeHtml(d.titolo ?? d.nome_file)}</small>

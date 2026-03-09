@@ -115,7 +115,7 @@ include __DIR__ . '/../components/sidebar.php';
         <i class="bi bi-robot me-2 text-primary"></i>AI Assistant
       </h1>
       <p class="text-muted small mb-0">
-        Analisi intelligente delle commesse · Powered by Claude (<code>claude-sonnet-4-6</code>)
+        Analisi intelligente delle pm_commesse · Powered by Claude (<code>claude-sonnet-4-6</code>)
       </p>
     </div>
     <div class="d-flex gap-2 align-items-center">
@@ -142,7 +142,7 @@ include __DIR__ . '/../components/sidebar.php';
                   <i class="bi bi-robot"></i>
                 </div>
                 <div>
-                  <p class="mb-2">Ciao! Sono il tuo assistente AI per la gestione delle commesse pubbliche. Posso aiutarti con:</p>
+                  <p class="mb-2">Ciao! Sono il tuo assistente AI per la gestione delle pm_commesse pubbliche. Posso aiutarti con:</p>
                   <ul class="mb-2">
                     <li><strong>Analisi di avanzamento</strong>: stato dei lavori, task in ritardo, KPI</li>
                     <li><strong>Rischi di progetto</strong>: identificazione e valutazione dei rischi</li>
@@ -177,7 +177,7 @@ include __DIR__ . '/../components/sidebar.php';
                 <i class="bi bi-calendar-check me-1"></i>Previsione completamento
               </span>
               <span class="badge border border-secondary text-secondary ai-suggestion-chip py-2 px-3"
-                    onclick="sendSuggestion('Quali sono le scadenze più urgenti e come gestirle?')">
+                    onclick="sendSuggestion('Quali sono le pm_scadenze più urgenti e come gestirle?')">
                 <i class="bi bi-alarm me-1"></i>Scadenze urgenti
               </span>
             </div>
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadCommesse() {
-    const res = await API.get('/api/commesse.php?per_page=200&sort_by=codice&stato=IN_ESECUZIONE');
+    const res = await API.get('/api/pm_commesse.php?per_page=200&sort_by=codice&stato=IN_ESECUZIONE');
     const sel = document.getElementById('selectCommessa');
     (res.data || []).forEach(c => {
         sel.insertAdjacentHTML('beforeend',
@@ -293,7 +293,7 @@ async function updateContextCard() {
     document.getElementById('contextBody').innerHTML =
         '<div class="text-center py-2"><div class="spinner-border spinner-border-sm"></div></div>';
     try {
-        const res = await API.get('/api/commesse.php?id=' + _commessaId);
+        const res = await API.get('/api/pm_commesse.php?id=' + _commessaId);
         const c = res.data;
         const avanz = parseFloat(c.percentuale_avanzamento || 0);
         const barCls = avanz >= 80 ? 'bg-success' : avanz >= 40 ? 'bg-primary' : 'bg-warning';

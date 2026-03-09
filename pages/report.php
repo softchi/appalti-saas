@@ -205,7 +205,7 @@ include __DIR__ . '/../components/sidebar.php';
               </button>
             </div>
             <div class="col-md-auto ms-md-auto">
-              <button class="btn btn-outline-secondary btn-sm" onclick="exportCsv('sal')">
+              <button class="btn btn-outline-secondary btn-sm" onclick="exportCsv('pm_sal')">
                 <i class="bi bi-download me-1"></i>CSV
               </button>
             </div>
@@ -278,7 +278,7 @@ include __DIR__ . '/../components/sidebar.php';
     <!-- ===== TAB SCADENZE ===== -->
     <div class="tab-pane fade" id="tabScadenze">
       <div class="d-flex justify-content-end mb-3">
-        <button class="btn btn-outline-secondary btn-sm" onclick="exportCsv('scadenze')">
+        <button class="btn btn-outline-secondary btn-sm" onclick="exportCsv('pm_scadenze')">
           <i class="bi bi-download me-1"></i>Esporta CSV
         </button>
       </div>
@@ -327,7 +327,7 @@ include __DIR__ . '/../components/sidebar.php';
           <div class="mt-4 alert alert-info">
             <i class="bi bi-info-circle me-2"></i>
             Il file JSON esportato è compatibile con Microsoft Project, Primavera e altri strumenti di PM.
-            Contiene tasks, dipendenze, date e percentuali di avanzamento.
+            Contiene pm_tasks, dipendenze, date e percentuali di avanzamento.
           </div>
         </div>
       </div>
@@ -379,7 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadSelectOptions() {
-    const res = await API.get('/api/commesse.php?per_page=200&sort_by=codice');
+    const res = await API.get('/api/pm_commesse.php?per_page=200&sort_by=codice');
     const list = res.data || [];
     ['avanzCommessa','salCommessa','ganttCommessa'].forEach(selId => {
         const sel = document.getElementById(selId);
@@ -407,15 +407,15 @@ async function loadPortfolio() {
             (parseFloat(stats.media_avanzamento) || 0).toFixed(1) + '%';
         document.getElementById('kpiMediaAvanz_label').textContent = 'Avanz. Medio';
 
-        // Fetch commesse list for table + charts
+        // Fetch pm_commesse list for table + charts
         const resC = await API.get('/api/reports.php?tipo=avanzamento');
-        const commesse = resC.commesse || [];
-        renderPortfolioTable(commesse);
+        const pm_commesse = resC.pm_commesse || [];
+        renderPortfolioTable(pm_commesse);
 
         // Charts
         const statiCount = {};
         const valorePerSA = {};
-        commesse.forEach(c => {
+        pm_commesse.forEach(c => {
             statiCount[c.stato] = (statiCount[c.stato] || 0) + 1;
             const sa = c.rup_nominativo || 'N/D';
             valorePerSA[sa] = (valorePerSA[sa] || 0) + parseFloat(c.importo_contrattuale || 0);
@@ -432,13 +432,13 @@ async function loadPortfolio() {
     } catch(e) { UI.error('Errore report: ' + e.message); }
 }
 
-function renderPortfolioTable(commesse) {
+function renderPortfolioTable(pm_commesse) {
     const tbody = document.getElementById('portfolioBody');
-    if (!commesse.length) {
+    if (!pm_commesse.length) {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">Nessuna commessa</td></tr>';
         return;
     }
-    tbody.innerHTML = commesse.map(c => {
+    tbody.innerHTML = pm_commesse.map(c => {
         const sc = parseInt(c.scostamento_giorni) || 0;
         const scCls = sc > 0 ? 'text-danger' : sc < 0 ? 'text-success' : 'text-muted';
         return `<tr>
@@ -488,9 +488,9 @@ async function loadAvanzamento(commessaId) {
                  {label:'In Ritardo', data:fasi.map(f=>f.in_ritardo??0)}]);
         }
 
-        // Table tasks
-        const tasks = res.tasks || [];
-        document.getElementById('avanzTasksBody').innerHTML = tasks.map(t => {
+        // Table pm_tasks
+        const pm_tasks = res.pm_tasks || [];
+        document.getElementById('avanzTasksBody').innerHTML = pm_tasks.map(t => {
             const sc = parseInt(t.scostamento_gg) || 0;
             return `<tr>
                 <td class="ps-3 font-monospace small">${escapeHtml(t.codice_wbs)}</td>
@@ -511,7 +511,7 @@ async function loadSalReport(commessaId) {
     document.getElementById('salPlaceholder').classList.add('d-none');
     document.getElementById('salResult').classList.remove('d-none');
     try {
-        const res = await API.get('/api/reports.php?tipo=sal&commessa_id=' + commessaId);
+        const res = await API.get('/api/reports.php?tipo=pm_sal&commessa_id=' + commessaId);
         _salData = res;
         const t = res.totali || {};
         document.getElementById('salKpi').innerHTML = [
@@ -525,17 +525,17 @@ async function loadSalReport(commessaId) {
                 <small class="text-muted">${k.label}</small>
             </div></div>`).join('');
 
-        const sal = res.sal || [];
+        const pm_sal = res.pm_sal || [];
         // Charts
-        chartSalAndamento('chartSalReport', sal);
+        chartSalAndamento('chartSalReport', pm_sal);
 
         // Liquidazione doughnut
-        const pagato  = sal.filter(s=>s.stato==='PAGATO').reduce((a,s)=>a+parseFloat(s.importo_netto||0),0);
+        const pagato  = pm_sal.filter(s=>s.stato==='PAGATO').reduce((a,s)=>a+parseFloat(s.importo_netto||0),0);
         const residuo = Math.max(0, parseFloat((t.importo_base||'0').replace(/[^0-9.]/g,'')) - pagato);
         chartStatoCommesse('chartSalLiquidazione', ['Pagato','Residuo'], [pagato, residuo]);
 
         // Table
-        document.getElementById('salTableBody').innerHTML = sal.map(s => `<tr>
+        document.getElementById('salTableBody').innerHTML = pm_sal.map(s => `<tr>
             <td class="ps-3 fw-semibold">SAL ${s.numero_sal}</td>
             <td class="small">${s.data_inizio_it??'—'} → ${s.data_fine_it??'—'}</td>
             <td>${s.importo_totale_fmt??'—'}</td>
@@ -589,7 +589,7 @@ async function loadCostiReport(commessaId) {
 // ============================================================
 async function loadScadenzeReport() {
     try {
-        const res = await API.get('/api/reports.php?tipo=scadenze');
+        const res = await API.get('/api/reports.php?tipo=pm_scadenze');
         _scadenzeData = res;
         const r = res.riepilogo || {};
         document.getElementById('scadenzeKpi').innerHTML = [
@@ -602,7 +602,7 @@ async function loadScadenzeReport() {
                 <small class="text-muted">${k.label}</small>
             </div></div>`).join('');
 
-        document.getElementById('scadenzeReportBody').innerHTML = (res.scadenze||[]).map(s => {
+        document.getElementById('scadenzeReportBody').innerHTML = (res.pm_scadenze||[]).map(s => {
             const g = parseInt(s.giorni);
             const cls = g < 0 ? 'table-danger' : g<=7 ? 'table-warning' : '';
             const urgBadge = g < 0 ? '<span class="badge bg-danger">SCADUTA</span>' :
@@ -655,17 +655,17 @@ function exportCsv(tipo) {
         window.open(API.getAppUrl() + '/api/reports.php?tipo=avanzamento&formato=csv', '_blank');
         return;
     }
-    if (tipo === 'sal' && _salData) {
+    if (tipo === 'pm_sal' && _salData) {
         headers = ['N° SAL','Da','A','Importo Tot.','Cumulato','Ritenuta','Netto','%','Stato'];
-        data = (_salData.sal||[]).map(s => [
+        data = (_salData.pm_sal||[]).map(s => [
             's'+s.numero_sal, s.data_inizio_it, s.data_fine_it,
             s.importo_totale_fmt, s.importo_cumulato_fmt, s.ritenuta_garanzia_fmt,
             s.importo_netto_fmt, s.percentuale_avanzamento, s.stato
         ]);
     }
-    if (tipo === 'scadenze' && _scadenzeData) {
+    if (tipo === 'pm_scadenze' && _scadenzeData) {
         headers = ['Urgenza','Commessa','Descrizione','Tipo','Data','Giorni','Responsabile'];
-        data = (_scadenzeData.scadenze||[]).map(s => {
+        data = (_scadenzeData.pm_scadenze||[]).map(s => {
             const g = parseInt(s.giorni);
             return [s.stato_urgenza, s.codice_commessa, s.descrizione, s.tipo,
                 s.data_scadenza_it, g, s.responsabile];

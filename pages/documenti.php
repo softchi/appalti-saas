@@ -5,20 +5,20 @@
 define('APP_INIT', true);
 require_once __DIR__ . '/../php/bootstrap.php';
 
-Auth::require('documenti.read');
+Auth::require('pm_documenti.read');
 
 $commessaId = sanitizeInt($_GET['commessa_id'] ?? null, 1);
 
-$commesse = Database::fetchAll(
-    'SELECT id, codice_commessa, oggetto FROM commesse ORDER BY codice_commessa'
+$pm_commesse = Database::fetchAll(
+    'SELECT id, codice_commessa, oggetto FROM pm_commesse ORDER BY codice_commessa'
 );
 
-if (!$commessaId && !empty($commesse)) {
-    $commessaId = (int)$commesse[0]['id'];
+if (!$commessaId && !empty($pm_commesse)) {
+    $commessaId = (int)$pm_commesse[0]['id'];
 }
 
 $pageTitle  = 'Archivio Documentale';
-$activeMenu = 'documenti';
+$activeMenu = 'pm_documenti';
 
 include COMPONENTS_PATH . '/header.php';
 include COMPONENTS_PATH . '/sidebar.php';
@@ -37,13 +37,13 @@ include COMPONENTS_PATH . '/sidebar.php';
   </div>
   <div class="d-flex align-items-center gap-2">
     <select class="form-select form-select-sm" id="commessaSelect" style="min-width:260px;">
-      <?php foreach ($commesse as $c): ?>
+      <?php foreach ($pm_commesse as $c): ?>
       <option value="<?= e($c['id']) ?>" <?= $c['id'] == $commessaId ? 'selected' : '' ?>>
         <?= e($c['codice_commessa']) ?> – <?= e(mb_substr($c['oggetto'], 0, 40)) ?>
       </option>
       <?php endforeach; ?>
     </select>
-    <?php if (Auth::can('documenti.upload')): ?>
+    <?php if (Auth::can('pm_documenti.upload')): ?>
     <button class="btn btn-primary btn-sm" id="uploadBtn">
       <i class="bi bi-upload me-1"></i>Carica documento
     </button>
@@ -59,7 +59,7 @@ include COMPONENTS_PATH . '/sidebar.php';
       <div class="card-header"><i class="bi bi-tags me-2 text-primary"></i>Categorie</div>
       <div class="list-group list-group-flush" id="categorieList">
         <button class="list-group-item list-group-item-action active" data-cat="">
-          <i class="bi bi-grid me-2"></i>Tutti i documenti
+          <i class="bi bi-grid me-2"></i>Tutti i pm_documenti
           <span class="badge bg-primary rounded-pill ms-auto" id="totDocs">0</span>
         </button>
       </div>
@@ -70,7 +70,7 @@ include COMPONENTS_PATH . '/sidebar.php';
       <div class="card-body p-2">
         <div class="input-group input-group-sm">
           <span class="input-group-text"><i class="bi bi-search"></i></span>
-          <input type="search" class="form-control" id="searchDoc" placeholder="Cerca documenti...">
+          <input type="search" class="form-control" id="searchDoc" placeholder="Cerca pm_documenti...">
         </div>
       </div>
     </div>
@@ -84,7 +84,7 @@ include COMPONENTS_PATH . '/sidebar.php';
     </div>
   </div>
 
-  <!-- Griglia documenti -->
+  <!-- Griglia pm_documenti -->
   <div class="col-xl-9 col-lg-8">
 
     <!-- Toolbar -->
@@ -268,7 +268,7 @@ async function loadDocumenti(page = 1) {
   grid.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner-border text-primary"></div></div>';
 
   try {
-    const data = await API.documenti.list(currentCid, params);
+    const data = await API.pm_documenti.list(currentCid, params);
 
     // Aggiorna categorie sidebar
     renderCategorie(data.categorie || []);
@@ -304,7 +304,7 @@ async function loadDocumenti(page = 1) {
               <small class="text-muted">${escapeHtml(doc.created_at_it || '')}</small>
             </div>
             <div class="card-footer p-1 text-center bg-transparent border-top">
-              <a href="${API.getAppUrl()}/api/documenti.php?action=download&id=${doc.id}"
+              <a href="${API.getAppUrl()}/api/pm_documenti.php?action=download&id=${doc.id}"
                  class="btn btn-link btn-sm p-0 me-2" onclick="event.stopPropagation();" title="Scarica">
                 <i class="bi bi-download text-primary"></i>
               </a>
@@ -338,7 +338,7 @@ async function loadDocumenti(page = 1) {
                   <td>${escapeHtml(doc.caricato_da || '—')}</td>
                   <td>${escapeHtml(doc.created_at_it || '—')}</td>
                   <td onclick="event.stopPropagation();">
-                    <a href="${API.getAppUrl()}/api/documenti.php?action=download&id=${doc.id}"
+                    <a href="${API.getAppUrl()}/api/pm_documenti.php?action=download&id=${doc.id}"
                        class="btn btn-outline-primary btn-sm btn-icon" title="Scarica">
                       <i class="bi bi-download"></i>
                     </a>
@@ -395,7 +395,7 @@ function renderCategorie(categorie) {
 }
 
 function openDoc(id) {
-  window.open(API.getAppUrl() + `/api/documenti.php?action=download&id=${id}`, '_blank');
+  window.open(API.getAppUrl() + `/api/pm_documenti.php?action=download&id=${id}`, '_blank');
 }
 
 // Upload form
@@ -444,7 +444,7 @@ document.getElementById('uploadForm')?.addEventListener('submit', async (e) => {
   fd.set('csrf_token', document.querySelector('meta[name="csrf-token"]').content);
 
   try {
-    await API.documenti.upload(fd);
+    await API.pm_documenti.upload(fd);
     UI.success('Documento caricato con successo');
     uploadModal.hide();
     document.getElementById('uploadForm').reset();
@@ -461,7 +461,7 @@ document.getElementById('uploadForm')?.addEventListener('submit', async (e) => {
 // Load categorie nel select upload
 async function loadCategorie() {
   try {
-    const data = await API.documenti.list(currentCid, { stato: 'PUBBLICATO', per_page: 1 });
+    const data = await API.pm_documenti.list(currentCid, { stato: 'PUBBLICATO', per_page: 1 });
     const sel = document.getElementById('uf_categoria');
     (data.categorie || []).forEach(c => {
       sel.innerHTML += `<option value="${c.id}">${escapeHtml(c.nome)}</option>`;

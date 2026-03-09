@@ -89,7 +89,7 @@ Porta:    21 (FTP) oppure 22 (SFTP se disponibile)
 **Cartella di destinazione:** `/htdocs/` (o come configurata nel tuo pannello)
 
 ### 3.2 Struttura upload
-Carica **tutta** la cartella `appalti-saas/` nella root del tuo sito:
+Carica **tutta** la cartella `pm_appalti-saas/` nella root del tuo sito:
 ```
 /htdocs/
 ├── index.php
@@ -110,8 +110,8 @@ Carica **tutta** la cartella `appalti-saas/` nella root del tuo sito:
 
 ### 3.3 Creare cartelle mancanti
 Se non esistono, crea via FTP o phpMyAdmin:
-- `uploads/` — con permessi **755**
-- `logs/`    — con permessi **755**
+- `uploads/` — con pm_permessi **755**
+- `logs/`    — con pm_permessi **755**
 
 ---
 
@@ -125,13 +125,13 @@ Altervista supporta `mod_rewrite`. Il file `.htaccess` già incluso gestisce:
 - Nessuna esecuzione PHP in `uploads/`
 
 ### 4.2 Se il sito è in una sottocartella
-Se il sito non è nella root ma in `/appalti/`, modifica `.htaccess`:
+Se il sito non è nella root ma in `/pm_appalti/`, modifica `.htaccess`:
 ```apache
-RewriteBase /appalti/
+RewriteBase /pm_appalti/
 ```
 E in `php/config.php`:
 ```php
-define('APP_URL', 'https://tuonome.altervista.org/appalti');
+define('APP_URL', 'https://tuonome.altervista.org/pm_appalti');
 ```
 
 ### 4.3 Abilitare HTTPS
@@ -149,7 +149,7 @@ Altervista fornisce certificati SSL gratuiti tramite Let's Encrypt.
 
 ### 5.1 Credenziali admin predefinite
 ```
-Email:    admin@appalti.local
+Email:    admin@pm_appalti.local
 Password: password
 ```
 > ⚠️ **CAMBIA LA PASSWORD IMMEDIATAMENTE** dopo il primo accesso!
@@ -162,10 +162,10 @@ Password: password
 
 ### 5.3 Configurazione iniziale
 1. **Impostazioni → Generali**: imposta nome app e URL
-2. **Impostazioni → Email**: configura SMTP per le notifiche
-3. **Gestione Utenti**: crea gli utenti del team (RUP, PM, DL, CSE...)
+2. **Impostazioni → Email**: configura SMTP per le pm_notifiche
+3. **Gestione Utenti**: crea gli pm_utenti del team (RUP, PM, DL, CSE...)
 4. **Appalti → Stazioni Appaltanti**: aggiungi i tuoi enti
-5. **Appalti → Imprese**: aggiungi le imprese esecutrici
+5. **Appalti → Imprese**: aggiungi le pm_imprese esecutrici
 
 ---
 
@@ -213,7 +213,7 @@ define('AI_MAX_TOKENS', 4096);
 5. Crea un **SAL** e approvalo
 6. Carica un **Documento**
 7. Crea una **Scadenza**
-8. Verifica che le notifiche arrivino
+8. Verifica che le pm_notifiche arrivino
 
 ---
 
@@ -223,7 +223,7 @@ define('AI_MAX_TOKENS', 4096);
 1. Controlla `logs/php_errors.log`
 2. Verifica che `php/config.php` abbia le credenziali DB corrette
 3. Verifica che MySQL sia raggiungibile (`DB_HOST=localhost`)
-4. Controlla i permessi cartella `uploads/` e `logs/`
+4. Controlla i pm_permessi cartella `uploads/` e `logs/`
 
 ### Database connection failed
 ```
@@ -237,12 +237,12 @@ Error: SQLSTATE[HY000] [1045] Access denied
 - Controlla che il file sia nominato `.htaccess` (con il punto iniziale)
 
 ### Upload file non funziona
-- Verifica permessi cartella `uploads/` (deve essere scrivibile: chmod 755 o 777)
+- Verifica pm_permessi cartella `uploads/` (deve essere scrivibile: chmod 755 o 777)
 - Verifica `upload_max_filesize` in `.htaccess` o `php.ini`
 - Controlla che il file `.htaccess` nella cartella `uploads/` blocchi l'esecuzione PHP
 
 ### Sessioni scadono subito
-- Verifica che la tabella `sessioni` esista nel database
+- Verifica che la tabella `pm_sessioni` esista nel database
 - Controlla `SESSION_LIFETIME` in `config.php` (default: 7200 secondi = 2 ore)
 
 ### AI Assistant non risponde
@@ -275,21 +275,21 @@ sudo apt update && sudo apt install -y apache2 php8.2 php8.2-pdo php8.2-mysql ma
 sudo a2enmod rewrite && sudo systemctl restart apache2
 
 # 3. Copia file
-sudo cp -r appalti-saas/ /var/www/html/
+sudo cp -r pm_appalti-saas/ /var/www/html/
 
 # 4. Importa DB
-mysql -u root -p appalti < database/schema.sql
+mysql -u root -p pm_appalti < database/schema.sql
 
-# 5. Imposta permessi
-sudo chown -R www-data:www-data /var/www/html/appalti-saas/
-sudo chmod -R 755 /var/www/html/appalti-saas/uploads/
+# 5. Imposta pm_permessi
+sudo chown -R www-data:www-data /var/www/html/pm_appalti-saas/
+sudo chmod -R 755 /var/www/html/pm_appalti-saas/uploads/
 ```
 
 ### Da MySQL a PostgreSQL
 Il layer PDO in `php/db.php` supporta PostgreSQL cambiando il DSN:
 ```php
 // In php/config.php
-define('DB_DSN', 'pgsql:host=localhost;port=5432;dbname=appalti');
+define('DB_DSN', 'pgsql:host=localhost;port=5432;dbname=pm_appalti');
 ```
 Saranno necessari adattamenti minori alle query (LIMIT/OFFSET, AUTO_INCREMENT → SERIAL, ecc.)
 

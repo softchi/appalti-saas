@@ -142,7 +142,7 @@ define('MAIL_HOST', getenv('MAIL_HOST') ?: 'smtp.example.com');
 define('MAIL_PORT', (int)(getenv('MAIL_PORT') ?: 587));
 define('MAIL_USER', getenv('MAIL_USER') ?: '');
 define('MAIL_PASS', getenv('MAIL_PASS') ?: '');
-define('MAIL_FROM', getenv('MAIL_FROM') ?: 'noreply@appalti.local');
+define('MAIL_FROM', getenv('MAIL_FROM') ?: 'noreply@pm_appalti.local');
 define('MAIL_FROM_NAME', APP_NAME);
 define('MAIL_ENCRYPTION', 'tls');      // tls | ssl | none
 

@@ -227,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnLogoutAll').addEventListener('click', logoutAll);
     document.getElementById('btnSalvaNotifiche').addEventListener('click', () => UI.success('Preferenze salvate'));
 
-    // Load sessioni on tab open
+    // Load pm_sessioni on tab open
     document.querySelector('[data-bs-target="#tabSicurezza"]').addEventListener('click', loadSessioni, {once:true});
 });
 
@@ -237,7 +237,7 @@ async function salvaProfilo() {
     const data = serializeForm(form);
     UI.showLoader();
     try {
-        await API.put('/api/utenti.php', data);
+        await API.put('/api/pm_utenti.php', data);
         UI.success('Profilo aggiornato');
         // Aggiorna UI
         document.getElementById('displayName').textContent =
@@ -267,7 +267,7 @@ async function cambiaPwd() {
     }
     UI.showLoader();
     try {
-        await API.post('/api/utenti.php?action=change_password', serializeForm(form));
+        await API.post('/api/pm_utenti.php?action=change_password', serializeForm(form));
         UI.success('Password cambiata con successo');
         form.reset();
     } catch(e) {
@@ -279,7 +279,7 @@ async function cambiaPwd() {
 async function loadSessioni() {
     const wrap = document.getElementById('sessioniList');
     try {
-        const res = await API.get('/api/utenti.php?action=sessioni');
+        const res = await API.get('/api/pm_utenti.php?action=pm_sessioni');
         const list = res.data || [];
         if (!list.length) {
             wrap.innerHTML = '<p class="text-muted small">Nessuna sessione trovata</p>';
@@ -295,7 +295,7 @@ async function loadSessioni() {
                 </div>
             </div>`).join('');
     } catch(e) {
-        wrap.innerHTML = '<p class="text-muted small">Errore caricamento sessioni</p>';
+        wrap.innerHTML = '<p class="text-muted small">Errore caricamento pm_sessioni</p>';
     }
 }
 
@@ -303,7 +303,7 @@ async function logoutAll() {
     const ok = await UI.confirm('Vuoi disconnetterti da tutti i dispositivi?<br><small>Sarai reindirizzato al login.</small>');
     if (!ok) return;
     try {
-        await API.post('/api/utenti.php?action=logout_all', {});
+        await API.post('/api/pm_utenti.php?action=logout_all', {});
         window.location.href = API.getAppUrl() + '/login.php';
     } catch(e) { UI.error(e.message); }
 }

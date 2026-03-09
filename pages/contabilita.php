@@ -1,11 +1,11 @@
 <?php
 /**
- * Pagina: Contabilità Lavori (categorie, voci, varianti)
+ * Pagina: Contabilità Lavori (categorie, voci, pm_varianti)
  */
 define('APP_INIT', true);
 require_once __DIR__ . '/../php/bootstrap.php';
 Auth::require();
-if (!Auth::can('sal.read')) {
+if (!Auth::can('pm_sal.read')) {
     header('Location: ' . APP_URL . '/pages/dashboard.php');
     exit;
 }
@@ -34,7 +34,7 @@ include __DIR__ . '/../components/sidebar.php';
       <select class="form-select form-select-sm" id="selectCommessa" style="max-width:300px">
         <option value="">— Seleziona Commessa —</option>
       </select>
-      <?php if (Auth::can('sal.create')): ?>
+      <?php if (Auth::can('pm_sal.create')): ?>
       <button class="btn btn-primary btn-sm" id="btnNuovaCategoria">
         <i class="bi bi-plus-circle me-1"></i>Categoria
       </button>
@@ -111,7 +111,7 @@ include __DIR__ . '/../components/sidebar.php';
                   <th class="text-end">Q.tà Eseg.</th>
                   <th class="text-end">Imp. Eseg.</th>
                   <th>% Eseg.</th>
-                  <?php if (Auth::can('sal.update')): ?>
+                  <?php if (Auth::can('pm_sal.update')): ?>
                   <th class="text-end pe-3">Azioni</th>
                   <?php endif; ?>
                 </tr>
@@ -142,14 +142,14 @@ include __DIR__ . '/../components/sidebar.php';
                   <th>Importo</th>
                   <th>Data Approvazione</th>
                   <th>Stato</th>
-                  <?php if (Auth::can('sal.update')): ?>
+                  <?php if (Auth::can('pm_sal.update')): ?>
                   <th class="text-end pe-3">Azioni</th>
                   <?php endif; ?>
                 </tr>
               </thead>
               <tbody id="variantiBody">
                 <tr><td colspan="7" class="text-center py-5 text-muted">
-                  Seleziona una commessa per visualizzare le varianti
+                  Seleziona una commessa per visualizzare le pm_varianti
                 </td></tr>
               </tbody>
             </table>
@@ -331,7 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadCommesse() {
-    const res = await API.get('/api/commesse.php?per_page=200&sort_by=codice');
+    const res = await API.get('/api/pm_commesse.php?per_page=200&sort_by=codice');
     const sel = document.getElementById('selectCommessa');
     (res.data || []).forEach(c => sel.insertAdjacentHTML('beforeend',
         `<option value="${c.id}">${escapeHtml(c.codice_commessa)} — ${escapeHtml(c.oggetto.substring(0,50))}</option>`));
@@ -356,7 +356,7 @@ async function loadContabilita() {
 
 async function loadVariantiKpi() {
     try {
-        const res = await API.get('/api/commesse.php?id=' + _commessaId + '&include=varianti');
+        const res = await API.get('/api/pm_commesse.php?id=' + _commessaId + '&include=pm_varianti');
         const v = res.varianti_tot ?? 0;
         document.getElementById('kpiVarianti').textContent = Format.euro(v);
     } catch(e) {}
@@ -422,7 +422,7 @@ async function loadVarianti() {
     if (!_commessaId) return;
     const tbody = document.getElementById('variantiBody');
     try {
-        const res = await API.get('/api/sal.php?action=varianti&commessa_id=' + _commessaId);
+        const res = await API.get('/api/pm_sal.php?action=pm_varianti&commessa_id=' + _commessaId);
         const list = res.data || [];
         if (!list.length) {
             tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Nessuna variante</td></tr>';
@@ -477,7 +477,7 @@ async function editCategoria(id) {
     const modal = new bootstrap.Modal(document.getElementById('categoriaModal'));
     modal.show();
     try {
-        const res = await API.get('/api/sal.php?action=categoria&id=' + id);
+        const res = await API.get('/api/pm_sal.php?action=categoria&id=' + id);
         const cat = res.data;
         document.getElementById('catId').value = cat.id;
         document.getElementById('catCommessaId').value = cat.commessa_id;
@@ -500,8 +500,8 @@ async function salvaCategoria() {
     data.commessa_id = document.getElementById('catCommessaId').value;
     UI.showLoader();
     try {
-        if (data.id) await API.put('/api/sal.php?action=categoria', data);
-        else await API.post('/api/sal.php?action=categoria', data);
+        if (data.id) await API.put('/api/pm_sal.php?action=categoria', data);
+        else await API.post('/api/pm_sal.php?action=categoria', data);
         UI.success('Categoria salvata');
         bootstrap.Modal.getInstance(document.getElementById('categoriaModal')).hide();
         loadContabilita();
@@ -526,7 +526,7 @@ async function editVariante(id) {
     const modal = new bootstrap.Modal(document.getElementById('varianteModal'));
     modal.show();
     try {
-        const res = await API.get('/api/sal.php?action=variante&id=' + id);
+        const res = await API.get('/api/pm_sal.php?action=variante&id=' + id);
         const v = res.data;
         document.getElementById('varId').value = v.id;
         const form = document.getElementById('varianteForm');
@@ -545,8 +545,8 @@ async function salvaVariante() {
     data.commessa_id = _commessaId;
     UI.showLoader();
     try {
-        if (data.id) await API.put('/api/sal.php?action=variante', data);
-        else await API.post('/api/sal.php?action=variante', data);
+        if (data.id) await API.put('/api/pm_sal.php?action=variante', data);
+        else await API.post('/api/pm_sal.php?action=variante', data);
         UI.success('Variante salvata');
         bootstrap.Modal.getInstance(document.getElementById('varianteModal')).hide();
         loadVarianti();

@@ -5,22 +5,22 @@
 define('APP_INIT', true);
 require_once __DIR__ . '/../php/bootstrap.php';
 
-Auth::require('sal.read');
+Auth::require('pm_sal.read');
 
 $commessaId = sanitizeInt($_GET['commessa_id'] ?? null, 1);
 
-$commesse = Database::fetchAll(
+$pm_commesse = Database::fetchAll(
     'SELECT id, codice_commessa, oggetto, importo_contrattuale
-     FROM commesse WHERE stato IN ("IN_ESECUZIONE","COMPLETATA","PIANIFICAZIONE")
+     FROM pm_commesse WHERE stato IN ("IN_ESECUZIONE","COMPLETATA","PIANIFICAZIONE")
      ORDER BY codice_commessa'
 );
 
-if (!$commessaId && !empty($commesse)) {
-    $commessaId = (int)$commesse[0]['id'];
+if (!$commessaId && !empty($pm_commesse)) {
+    $commessaId = (int)$pm_commesse[0]['id'];
 }
 
 $pageTitle    = 'SAL - Stato Avanzamento Lavori';
-$activeMenu   = 'sal';
+$activeMenu   = 'pm_sal';
 $extraScripts = [APP_URL . '/js/charts.js'];
 
 include COMPONENTS_PATH . '/header.php';
@@ -40,13 +40,13 @@ include COMPONENTS_PATH . '/sidebar.php';
   </div>
   <div class="d-flex align-items-center gap-2">
     <select class="form-select form-select-sm" id="commessaSelect" style="min-width:280px;">
-      <?php foreach ($commesse as $c): ?>
+      <?php foreach ($pm_commesse as $c): ?>
       <option value="<?= e($c['id']) ?>" <?= $c['id'] == $commessaId ? 'selected' : '' ?>>
         <?= e($c['codice_commessa']) ?> – <?= e(mb_substr($c['oggetto'], 0, 40)) ?>
       </option>
       <?php endforeach; ?>
     </select>
-    <?php if (Auth::can('sal.create')): ?>
+    <?php if (Auth::can('pm_sal.create')): ?>
     <button class="btn btn-primary btn-sm" id="nuovoSalBtn">
       <i class="bi bi-plus-lg me-1"></i>Nuovo SAL
     </button>
@@ -154,7 +154,7 @@ include COMPONENTS_PATH . '/sidebar.php';
               </div>
             </div>
             <div class="col-md-4">
-              <label class="form-label">Importo varianti (€)</label>
+              <label class="form-label">Importo pm_varianti (€)</label>
               <div class="input-group">
                 <span class="input-group-text">€</span>
                 <input type="number" class="form-control" name="importo_varianti" id="sf_varianti"
@@ -208,8 +208,8 @@ async function loadSal(cid) {
   document.getElementById('sf_commessa_id').value = cid;
 
   try {
-    const data = await API.sal.list(cid);
-    salData = data.sal || [];
+    const data = await API.pm_sal.list(cid);
+    salData = data.pm_sal || [];
 
     // KPI
     document.getElementById('salKpi').innerHTML = `
@@ -307,11 +307,11 @@ async function loadSal(cid) {
         <td><small>${escapeHtml(s.dl_nome || '—')}</small></td>
         <td class="text-center">
           <div class="btn-group btn-group-sm">
-            <a href="${API.getAppUrl()}/pages/sal-detail.php?id=${s.id}"
+            <a href="${API.getAppUrl()}/pages/pm_sal-detail.php?id=${s.id}"
                class="btn btn-outline-primary btn-icon" title="Dettaglio">
               <i class="bi bi-eye"></i>
             </a>
-            ${canApprove && <?= json_encode(Auth::can('sal.approve')) ?> ? `
+            ${canApprove && <?= json_encode(Auth::can('pm_sal.approve')) ?> ? `
             <button class="btn btn-outline-success btn-icon approvaSal" data-id="${s.id}" title="Approva SAL">
               <i class="bi bi-check-circle"></i>
             </button>` : ''}
@@ -327,7 +327,7 @@ async function loadSal(cid) {
         const ok = await UI.confirm('Approva SAL', 'Confermi l\'approvazione del SAL?', 'Approva', 'btn-success');
         if (!ok) return;
         try {
-          await API.sal.approve(id, '');
+          await API.pm_sal.approve(id, '');
           UI.success('SAL approvato con successo');
           loadSal(currentCid);
         } catch (err) { UI.error(err.message); }
@@ -360,7 +360,7 @@ document.getElementById('salForm')?.addEventListener('submit', async (e) => {
 
   const data = serializeForm(document.getElementById('salForm'));
   try {
-    await API.sal.create(data);
+    await API.pm_sal.create(data);
     UI.success('SAL creato con successo');
     salModalBS.hide();
     loadSal(currentCid);

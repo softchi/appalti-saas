@@ -8,7 +8,7 @@ require_once __DIR__ . '/../php/bootstrap.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 if (!Auth::check()) jsonError('Non autenticato', 401);
-if (!Auth::can('scadenze.read')) jsonError('Permesso negato', 403);
+if (!Auth::can('pm_scadenze.read')) jsonError('Permesso negato', 403);
 
 $method     = strtoupper($_SERVER['REQUEST_METHOD']);
 $id         = sanitizeInt($_GET['id'] ?? null, 1);
@@ -17,7 +17,7 @@ $commessaId = sanitizeInt($_GET['commessa_id'] ?? null, 1);
 switch ($method) {
     case 'GET':
         if ($id) {
-            $sc = Database::fetchOne('SELECT * FROM scadenze WHERE id = :id', [':id' => $id]);
+            $sc = Database::fetchOne('SELECT * FROM pm_scadenze WHERE id = :id', [':id' => $id]);
             if (!$sc) jsonError('Scadenza non trovata', 404);
             $sc['data_scadenza_it'] = formatDate($sc['data_scadenza']);
             $sc['giorni_alla_scadenza'] = (int)(strtotime($sc['data_scadenza']) - time()) / 86400;
@@ -27,9 +27,9 @@ switch ($method) {
         $sql    = 'SELECT sc.*, c.codice_commessa, c.oggetto AS commessa_oggetto,
                           CONCAT(u.cognome, " ", u.nome) AS responsabile_nome,
                           DATEDIFF(sc.data_scadenza, CURDATE()) AS giorni
-                   FROM scadenze sc
-                   LEFT JOIN commesse c ON c.id = sc.commessa_id
-                   LEFT JOIN utenti u ON u.id = sc.responsabile_id
+                   FROM pm_scadenze sc
+                   LEFT JOIN pm_commesse c ON c.id = sc.commessa_id
+                   LEFT JOIN pm_utenti u ON u.id = sc.responsabile_id
                    WHERE 1=1';
         $params = [];
 
@@ -54,14 +54,14 @@ switch ($method) {
         break;
 
     case 'POST':
-        if (!Auth::can('scadenze.create')) jsonError('Permesso negato', 403);
+        if (!Auth::can('pm_scadenze.create')) jsonError('Permesso negato', 403);
         Auth::requireCsrf();
         $body = !empty($_POST) ? $_POST : getJsonBody();
         $v = new Validator($body);
         $v->required('titolo', 'Titolo')->required('data_scadenza', 'Data scadenza')
           ->date('data_scadenza', 'Data scadenza')->orFail();
 
-        $id = Database::insert('scadenze', [
+        $id = Database::insert('pm_scadenze', [
             'commessa_id'       => sanitizeInt($body['commessa_id'] ?? null, 1) ?? null,
             'appalto_id'        => sanitizeInt($body['appalto_id'] ?? null, 1) ?? null,
             'tipo'              => in_array($body['tipo'] ?? '', ['CONTRATTUALE','NORMATIVA','DOCUMENTALE','PAGAMENTO','COMUNICAZIONE','COLLAUDO','ALTRO']) ? $body['tipo'] : 'ALTRO',
@@ -74,15 +74,15 @@ switch ($method) {
             'note'              => sanitizeString($body['note'] ?? '', 65535),
             'created_by'        => Auth::id(),
         ]);
-        Logger::audit('CREATE', 'scadenze', $id);
+        Logger::audit('CREATE', 'pm_scadenze', $id);
         jsonSuccess('Scadenza creata', ['id' => $id], 201);
         break;
 
     case 'PUT':
         if (!$id) jsonError('ID richiesto', 400);
-        if (!Auth::can('scadenze.update')) jsonError('Permesso negato', 403);
+        if (!Auth::can('pm_scadenze.update')) jsonError('Permesso negato', 403);
         Auth::requireCsrf();
-        $existing = Database::fetchOne('SELECT * FROM scadenze WHERE id = :id', [':id' => $id]);
+        $existing = Database::fetchOne('SELECT * FROM pm_scadenze WHERE id = :id', [':id' => $id]);
         if (!$existing) jsonError('Scadenza non trovata', 404);
         $body = !empty($_POST) ? $_POST : getJsonBody();
         $upd = [];
@@ -95,8 +95,8 @@ switch ($method) {
                 default  => sanitizeString((string)$body[$f], 65535),
             };
         }
-        Database::update('scadenze', $upd, ['id' => $id]);
-        Logger::audit('UPDATE', 'scadenze', $id);
+        Database::update('pm_scadenze', $upd, ['id' => $id]);
+        Logger::audit('UPDATE', 'pm_scadenze', $id);
         jsonSuccess('Scadenza aggiornata');
         break;
 

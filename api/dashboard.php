@@ -28,10 +28,10 @@ $kpiCommesse = Database::fetchOne(
        SUM(stato = "BOZZA" OR stato = "PIANIFICAZIONE") AS in_pianificazione,
        ROUND(AVG(percentuale_avanzamento), 1) AS media_avanzamento,
        SUM(importo_contrattuale) AS valore_totale
-     FROM commesse c
+     FROM pm_commesse c
      WHERE 1=1' . (in_array($user['ruolo_codice'], ['SUPERADMIN','ADMIN','RUP','AMMINISTRAZIONE']) ? '' :
        ' AND (c.rup_id = :uid OR c.pm_id = :uid2 OR c.dl_id = :uid3
-              OR EXISTS (SELECT 1 FROM commesse_utenti cu WHERE cu.commessa_id = c.id AND cu.utente_id = :uid4))'),
+              OR EXISTS (SELECT 1 FROM pm_commesse_utenti cu WHERE cu.commessa_id = c.id AND cu.utente_id = :uid4))'),
     in_array($user['ruolo_codice'], ['SUPERADMIN','ADMIN','RUP','AMMINISTRAZIONE']) ? [] :
         [':uid' => $uid, ':uid2' => $uid, ':uid3' => $uid, ':uid4' => $uid]
 );
@@ -44,16 +44,16 @@ $kpiTasks = Database::fetchOne(
        SUM(stato = "IN_RITARDO") AS in_ritardo,
        SUM(stato = "COMPLETATO") AS completati,
        SUM(tipo = "MILESTONE") AS milestones
-     FROM tasks t
-     JOIN commesse c ON c.id = t.commessa_id
+     FROM pm_tasks t
+     JOIN pm_commesse c ON c.id = t.commessa_id
      WHERE t.assegnato_a = :uid OR c.pm_id = :uid2',
     [':uid' => $uid, ':uid2' => $uid]
 );
 
 // SAL in attesa approvazione
 $salDaApprovare = (int)Database::fetchValue(
-    'SELECT COUNT(*) FROM sal s
-     JOIN commesse c ON c.id = s.commessa_id
+    'SELECT COUNT(*) FROM pm_sal s
+     JOIN pm_commesse c ON c.id = s.commessa_id
      WHERE s.stato = "EMESSO" AND c.rup_id = :uid',
     [':uid' => $uid]
 );
@@ -63,8 +63,8 @@ $scadenzeProssime = Database::fetchAll(
     'SELECT sc.id, sc.titolo, sc.data_scadenza, sc.tipo, sc.priorita,
             c.codice_commessa, c.oggetto AS commessa,
             DATEDIFF(sc.data_scadenza, CURDATE()) AS giorni
-     FROM scadenze sc
-     LEFT JOIN commesse c ON c.id = sc.commessa_id
+     FROM pm_scadenze sc
+     LEFT JOIN pm_commesse c ON c.id = sc.commessa_id
      WHERE sc.stato = "ATTIVA"
        AND sc.data_scadenza BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
        AND (sc.responsabile_id = :uid OR c.pm_id = :uid2 OR c.rup_id = :uid3)
@@ -75,8 +75,8 @@ $scadenzeProssime = Database::fetchAll(
 
 // Scadenze scadute
 $scadenzeScadute = (int)Database::fetchValue(
-    'SELECT COUNT(*) FROM scadenze sc
-     LEFT JOIN commesse c ON c.id = sc.commessa_id
+    'SELECT COUNT(*) FROM pm_scadenze sc
+     LEFT JOIN pm_commesse c ON c.id = sc.commessa_id
      WHERE sc.stato = "ATTIVA" AND sc.data_scadenza < CURDATE()
        AND (sc.responsabile_id = :uid OR c.pm_id = :uid2)',
     [':uid' => $uid, ':uid2' => $uid]
@@ -90,10 +90,10 @@ $commesseRecenti = Database::fetchAll(
             c.data_fine_prevista, c.priorita, c.colore,
             sa.denominazione AS stazione_appaltante,
             DATEDIFF(c.data_fine_prevista, CURDATE()) AS giorni_alla_fine,
-            (SELECT COUNT(*) FROM tasks t WHERE t.commessa_id = c.id AND t.stato = "IN_RITARDO") AS tasks_ritardo
-     FROM commesse c
-     JOIN appalti a ON a.id = c.appalto_id
-     JOIN stazioni_appaltanti sa ON sa.id = a.stazione_appaltante_id
+            (SELECT COUNT(*) FROM pm_tasks t WHERE t.commessa_id = c.id AND t.stato = "IN_RITARDO") AS tasks_ritardo
+     FROM pm_commesse c
+     JOIN pm_appalti a ON a.id = c.appalto_id
+     JOIN pm_stazioni_appaltanti sa ON sa.id = a.stazione_appaltante_id
      WHERE c.stato IN ("IN_ESECUZIONE","PIANIFICAZIONE")
      ORDER BY c.updated_at DESC
      LIMIT 6'
@@ -108,7 +108,7 @@ $avanzamentoMensile = Database::fetchAll(
        DATE_FORMAT(created_at, "%b %Y") AS mese_label,
        COUNT(DISTINCT CASE WHEN stato = "COMPLETATA" THEN id END) AS completate,
        COUNT(DISTINCT CASE WHEN stato IN ("IN_ESECUZIONE","PIANIFICAZIONE") THEN id END) AS in_corso
-     FROM commesse
+     FROM pm_commesse
      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
      GROUP BY DATE_FORMAT(created_at, "%Y-%m")
      ORDER BY mese ASC'
@@ -121,20 +121,20 @@ $valorePerStato = Database::fetchAll(
     'SELECT stato,
             COUNT(*) AS n,
             ROUND(SUM(importo_contrattuale), 2) AS valore
-     FROM commesse
+     FROM pm_commesse
      GROUP BY stato
      ORDER BY valore DESC'
 );
 
 // ============================================================================
-// MY TASKS (tasks assegnati all\'utente corrente)
+// MY TASKS (pm_tasks assegnati all\'utente corrente)
 // ============================================================================
 $myTasks = Database::fetchAll(
     'SELECT t.id, t.nome, t.stato, t.priorita, t.percentuale_completamento,
             t.data_fine_prevista, c.codice_commessa, c.id AS commessa_id,
             DATEDIFF(t.data_fine_prevista, CURDATE()) AS giorni_alla_scadenza
-     FROM tasks t
-     JOIN commesse c ON c.id = t.commessa_id
+     FROM pm_tasks t
+     JOIN pm_commesse c ON c.id = t.commessa_id
      WHERE t.assegnato_a = :uid AND t.stato NOT IN ("COMPLETATO","ANNULLATO")
      ORDER BY t.data_fine_prevista ASC
      LIMIT 8',
@@ -147,21 +147,21 @@ $myTasks = Database::fetchAll(
 $attivitaRecente = Database::fetchAll(
     'SELECT al.azione, al.entita_tipo, al.entita_id, al.created_at,
             CONCAT(u.cognome, " ", u.nome) AS utente
-     FROM audit_log al
-     LEFT JOIN utenti u ON u.id = al.utente_id
+     FROM pm_audit_log al
+     LEFT JOIN pm_utenti u ON u.id = al.utente_id
      WHERE al.esito = "OK"
      ORDER BY al.created_at DESC
      LIMIT 10'
 );
 
-// Formatta scadenze prossime
+// Formatta pm_scadenze prossime
 $scadenzeProssime = array_map(function($s) {
     $s['data_scadenza_it'] = formatDate($s['data_scadenza']);
     $s['urgente'] = $s['giorni'] <= 3;
     return $s;
 }, $scadenzeProssime);
 
-// Formatta commesse
+// Formatta pm_commesse
 $commesseRecenti = array_map(function($c) {
     $c['data_fine_it'] = formatDate($c['data_fine_prevista']);
     $c['in_ritardo']   = ($c['giorni_alla_fine'] !== null && $c['giorni_alla_fine'] < 0);
@@ -170,8 +170,8 @@ $commesseRecenti = array_map(function($c) {
 
 jsonResponse([
     'kpi' => [
-        'commesse'         => $kpiCommesse,
-        'tasks'            => $kpiTasks,
+        'pm_commesse'         => $kpiCommesse,
+        'pm_tasks'            => $kpiTasks,
         'sal_da_approvare' => $salDaApprovare,
         'scadenze_scadute' => $scadenzeScadute,
         'valore_totale_fmt' => formatEuro((float)($kpiCommesse['valore_totale'] ?? 0)),

@@ -1,7 +1,7 @@
 <?php
 /**
  * API: Stazioni Appaltanti e Imprese
- * Fornisce anche endpoint per stazioni_appaltanti e imprese (usati dai select di commesse.php)
+ * Fornisce anche endpoint per pm_stazioni_appaltanti e pm_imprese (usati dai select di pm_commesse.php)
  */
 define('APP_INIT', true);
 require_once __DIR__ . '/../php/bootstrap.php';
@@ -21,14 +21,14 @@ try {
         $action === 'stazione' && $method === 'DELETE' => deleteStazione(),
 
         // Imprese
-        $action === 'imprese'  && $method === 'GET'    => listImprese(),
+        $action === 'pm_imprese'  && $method === 'GET'    => listImprese(),
         $action === 'impresa'  && $method === 'GET'    => getImpresa($id),
         $action === 'impresa'  && $method === 'POST'   => createImpresa(),
         $action === 'impresa'  && $method === 'PUT'    => updateImpresa(),
         $action === 'impresa'  && $method === 'DELETE' => deleteImpresa(),
 
         // Shortcut senza action (for backward compat with selects)
-        $method === 'GET' && get('tipo','string','') === 'imprese'  => listImprese(),
+        $method === 'GET' && get('tipo','string','') === 'pm_imprese'  => listImprese(),
         $method === 'GET' && get('tipo','string','') === 'stazioni' => listStazioni(),
 
         default => jsonError('Azione non supportata', 405),
@@ -50,7 +50,7 @@ function listStazioni(): void {
     }
     $rows = Database::fetchAll(
         'SELECT id, denominazione, codice_fiscale, indirizzo, comune, provincia, cap, email, pec
-         FROM stazioni_appaltanti WHERE ' . implode(' AND ', $where) . ' ORDER BY denominazione',
+         FROM pm_stazioni_appaltanti WHERE ' . implode(' AND ', $where) . ' ORDER BY denominazione',
         $params
     );
     jsonSuccess($rows);
@@ -58,7 +58,7 @@ function listStazioni(): void {
 
 function getStazione(int $id): void {
     $row = Database::fetchOne(
-        'SELECT * FROM stazioni_appaltanti WHERE id=:id', [':id' => $id]);
+        'SELECT * FROM pm_stazioni_appaltanti WHERE id=:id', [':id' => $id]);
     if (!$row) jsonError('Stazione appaltante non trovata', 404);
     jsonSuccess($row);
 }
@@ -72,7 +72,7 @@ function createStazione(): void {
     $v->required('denominazione');
     if ($errors = $v->errors()) jsonError('Dati non validi', 422, $errors);
 
-    $id = Database::insert('stazioni_appaltanti', [
+    $id = Database::insert('pm_stazioni_appaltanti', [
         'denominazione'  => sanitizeString($data['denominazione']),
         'codice_fiscale' => !empty($data['codice_fiscale']) ? sanitizeString($data['codice_fiscale']) : null,
         'indirizzo'      => !empty($data['indirizzo'])      ? sanitizeString($data['indirizzo']) : null,
@@ -85,7 +85,7 @@ function createStazione(): void {
         'referente'      => !empty($data['referente'])      ? sanitizeString($data['referente']) : null,
     ]);
 
-    Logger::audit('CREATE', 'stazioni_appaltanti', $id, 'SUCCESSO');
+    Logger::audit('CREATE', 'pm_stazioni_appaltanti', $id, 'SUCCESSO');
     jsonSuccess(['id' => $id], [], 'Stazione appaltante creata');
 }
 
@@ -107,8 +107,8 @@ function updateStazione(): void {
     }
     if (!$update) jsonError('Nessun dato', 400);
 
-    Database::update('stazioni_appaltanti', $update, ['id' => $id]);
-    Logger::audit('UPDATE', 'stazioni_appaltanti', $id, 'SUCCESSO');
+    Database::update('pm_stazioni_appaltanti', $update, ['id' => $id]);
+    Logger::audit('UPDATE', 'pm_stazioni_appaltanti', $id, 'SUCCESSO');
     jsonSuccess(null, [], 'Stazione aggiornata');
 }
 
@@ -121,12 +121,12 @@ function deleteStazione(): void {
     if (!$id) jsonError('ID mancante', 400);
 
     // Check if in use
-    $count = Database::fetchValue('SELECT COUNT(*) FROM appalti WHERE stazione_appaltante_id=:id', [':id'=>$id]);
-    $count2 = Database::fetchValue('SELECT COUNT(*) FROM commesse WHERE stazione_appaltante_id=:id', [':id'=>$id]);
-    if (($count + $count2) > 0) jsonError('Stazione utilizzata in appalti/commesse, impossibile eliminare', 409);
+    $count = Database::fetchValue('SELECT COUNT(*) FROM pm_appalti WHERE stazione_appaltante_id=:id', [':id'=>$id]);
+    $count2 = Database::fetchValue('SELECT COUNT(*) FROM pm_commesse WHERE stazione_appaltante_id=:id', [':id'=>$id]);
+    if (($count + $count2) > 0) jsonError('Stazione utilizzata in pm_appalti/pm_commesse, impossibile eliminare', 409);
 
-    Database::delete('stazioni_appaltanti', ['id' => $id]);
-    Logger::audit('DELETE', 'stazioni_appaltanti', $id, 'SUCCESSO');
+    Database::delete('pm_stazioni_appaltanti', ['id' => $id]);
+    Logger::audit('DELETE', 'pm_stazioni_appaltanti', $id, 'SUCCESSO');
     jsonSuccess(null, [], 'Stazione eliminata');
 }
 
@@ -144,14 +144,14 @@ function listImprese(): void {
     $rows = Database::fetchAll(
         'SELECT id, denominazione, partita_iva, codice_fiscale, indirizzo, comune,
                 provincia, categoria_soa, classifica_soa, email, pec, telefono, referente
-         FROM imprese WHERE ' . implode(' AND ', $where) . ' ORDER BY denominazione',
+         FROM pm_imprese WHERE ' . implode(' AND ', $where) . ' ORDER BY denominazione',
         $params
     );
     jsonSuccess($rows);
 }
 
 function getImpresa(int $id): void {
-    $row = Database::fetchOne('SELECT * FROM imprese WHERE id=:id', [':id' => $id]);
+    $row = Database::fetchOne('SELECT * FROM pm_imprese WHERE id=:id', [':id' => $id]);
     if (!$row) jsonError('Impresa non trovata', 404);
     jsonSuccess($row);
 }
@@ -165,7 +165,7 @@ function createImpresa(): void {
     $v->required('denominazione');
     if ($errors = $v->errors()) jsonError('Dati non validi', 422, $errors);
 
-    $id = Database::insert('imprese', [
+    $id = Database::insert('pm_imprese', [
         'denominazione'  => sanitizeString($data['denominazione']),
         'partita_iva'    => !empty($data['partita_iva'])    ? sanitizeString($data['partita_iva']) : null,
         'codice_fiscale' => !empty($data['codice_fiscale']) ? sanitizeString($data['codice_fiscale']) : null,
@@ -182,7 +182,7 @@ function createImpresa(): void {
         'durc_scadenza'  => !empty($data['durc_scadenza'])  ? sanitizeDate($data['durc_scadenza']) : null,
     ]);
 
-    Logger::audit('CREATE', 'imprese', $id, 'SUCCESSO');
+    Logger::audit('CREATE', 'pm_imprese', $id, 'SUCCESSO');
     jsonSuccess(['id' => $id], [], 'Impresa creata');
 }
 
@@ -204,8 +204,8 @@ function updateImpresa(): void {
     }
     if (!$update) jsonError('Nessun dato', 400);
 
-    Database::update('imprese', $update, ['id' => $id]);
-    Logger::audit('UPDATE', 'imprese', $id, 'SUCCESSO');
+    Database::update('pm_imprese', $update, ['id' => $id]);
+    Logger::audit('UPDATE', 'pm_imprese', $id, 'SUCCESSO');
     jsonSuccess(null, [], 'Impresa aggiornata');
 }
 
@@ -217,10 +217,10 @@ function deleteImpresa(): void {
     $id   = (int)($data['id'] ?? get('id','int',0));
     if (!$id) jsonError('ID mancante', 400);
 
-    $count = Database::fetchValue('SELECT COUNT(*) FROM commesse WHERE impresa_id=:id', [':id'=>$id]);
-    if ($count > 0) jsonError('Impresa associata a commesse, impossibile eliminare', 409);
+    $count = Database::fetchValue('SELECT COUNT(*) FROM pm_commesse WHERE impresa_id=:id', [':id'=>$id]);
+    if ($count > 0) jsonError('Impresa associata a pm_commesse, impossibile eliminare', 409);
 
-    Database::delete('imprese', ['id' => $id]);
-    Logger::audit('DELETE', 'imprese', $id, 'SUCCESSO');
+    Database::delete('pm_imprese', ['id' => $id]);
+    Logger::audit('DELETE', 'pm_imprese', $id, 'SUCCESSO');
     jsonSuccess(null, [], 'Impresa eliminata');
 }

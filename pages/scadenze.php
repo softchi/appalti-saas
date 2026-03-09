@@ -5,13 +5,13 @@
 define('APP_INIT', true);
 require_once __DIR__ . '/../php/bootstrap.php';
 Auth::require();
-if (!Auth::can('scadenze.read')) {
+if (!Auth::can('pm_scadenze.read')) {
     header('Location: ' . APP_URL . '/pages/dashboard.php');
     exit;
 }
 
 $pageTitle  = 'Scadenzario';
-$activeMenu = 'scadenze';
+$activeMenu = 'pm_scadenze';
 include __DIR__ . '/../components/header.php';
 include __DIR__ . '/../components/sidebar.php';
 ?>
@@ -29,7 +29,7 @@ include __DIR__ . '/../components/sidebar.php';
         </ol>
       </nav>
     </div>
-    <?php if (Auth::can('scadenze.create')): ?>
+    <?php if (Auth::can('pm_scadenze.create')): ?>
     <button class="btn btn-primary" id="btnNuovaScadenza">
       <i class="bi bi-calendar-plus me-2"></i>Nuova Scadenza
     </button>
@@ -117,7 +117,7 @@ include __DIR__ . '/../components/sidebar.php';
         </div>
         <div class="col-6 col-md-2">
           <select class="form-select form-select-sm" id="filterCommessa">
-            <option value="">Tutte le commesse</option>
+            <option value="">Tutte le pm_commesse</option>
           </select>
         </div>
         <div class="col-6 col-md-2">
@@ -300,7 +300,7 @@ let _cachedScadenze = [];
 async function loadSelectOptions() {
     try {
         // Commesse per filtro
-        const res = await API.get('/api/commesse.php?per_page=200&sort_by=codice');
+        const res = await API.get('/api/pm_commesse.php?per_page=200&sort_by=codice');
         const list = res.data || [];
         const selF = document.getElementById('filterCommessa');
         const selC = document.getElementById('fCommessa');
@@ -310,10 +310,10 @@ async function loadSelectOptions() {
             selC.insertAdjacentHTML('beforeend', opt);
         });
         // Utenti per responsabile
-        const resU = await API.get('/api/utenti.php?per_page=200');
-        const utenti = resU.data || [];
+        const resU = await API.get('/api/pm_utenti.php?per_page=200');
+        const pm_utenti = resU.data || [];
         const selR = document.getElementById('fResponsabile');
-        utenti.forEach(u => {
+        pm_utenti.forEach(u => {
             selR.insertAdjacentHTML('beforeend',
                 `<option value="${u.id}">${escapeHtml(u.cognome)} ${escapeHtml(u.nome)}</option>`);
         });
@@ -339,7 +339,7 @@ async function loadScadenze(page = 1) {
     });
 
     try {
-        const res = await API.get('/api/scadenze.php?' + params.toString());
+        const res = await API.get('/api/pm_scadenze.php?' + params.toString());
         const list = res.data || [];
         _cachedScadenze = list;
 
@@ -353,7 +353,7 @@ async function loadScadenze(page = 1) {
         renderTable(list);
         renderPagination(meta.current_page || 1, meta.last_page || 1, 'paginazione', loadScadenze);
         document.getElementById('paginationInfo').textContent =
-            `${meta.from ?? 0}–${meta.to ?? 0} di ${meta.total ?? 0} scadenze`;
+            `${meta.from ?? 0}–${meta.to ?? 0} di ${meta.total ?? 0} pm_scadenze`;
     } catch(e) {
         document.getElementById('scadenzeBody').innerHTML =
             `<tr><td colspan="8" class="text-danger text-center py-4">${escapeHtml(e.message)}</td></tr>`;
@@ -475,7 +475,7 @@ async function openEdit(id) {
     const modal = new bootstrap.Modal(document.getElementById('scadenzaModal'));
     modal.show();
     try {
-        const res = await API.get('/api/scadenze.php?id=' + id);
+        const res = await API.get('/api/pm_scadenze.php?id=' + id);
         const s = res.data;
         document.getElementById('scadenzaId').value = s.id;
         const form = document.getElementById('scadenzaForm');
@@ -496,10 +496,10 @@ async function salvaScadenza() {
     UI.showLoader();
     try {
         if (data.id) {
-            await API.put('/api/scadenze.php', data);
+            await API.put('/api/pm_scadenze.php', data);
             UI.success('Scadenza aggiornata');
         } else {
-            await API.post('/api/scadenze.php', data);
+            await API.post('/api/pm_scadenze.php', data);
             UI.success('Scadenza creata');
         }
         bootstrap.Modal.getInstance(document.getElementById('scadenzaModal')).hide();
@@ -515,7 +515,7 @@ async function completa(id) {
     const ok = await UI.confirm('Segnare questa scadenza come completata?');
     if (!ok) return;
     try {
-        await API.put('/api/scadenze.php', { id, stato: 'COMPLETATA' });
+        await API.put('/api/pm_scadenze.php', { id, stato: 'COMPLETATA' });
         UI.success('Scadenza completata');
         loadScadenze(currentPage);
     } catch(e) { UI.error(e.message); }
@@ -525,7 +525,7 @@ async function elimina(id, desc) {
     const ok = await UI.confirm(`Eliminare la scadenza <strong>${escapeHtml(desc)}</strong>?`);
     if (!ok) return;
     try {
-        await API.delete('/api/scadenze.php', { id });
+        await API.delete('/api/pm_scadenze.php', { id });
         UI.success('Scadenza eliminata');
         loadScadenze(currentPage);
     } catch(e) { UI.error(e.message); }

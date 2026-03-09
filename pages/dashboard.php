@@ -5,7 +5,7 @@
 define('APP_INIT', true);
 require_once __DIR__ . '/../php/bootstrap.php';
 
-Auth::require('commesse.read');
+Auth::require('pm_commesse.read');
 
 $pageTitle  = 'Dashboard';
 $activeMenu = 'dashboard';
@@ -61,7 +61,7 @@ include COMPONENTS_PATH . '/sidebar.php';
       <div class="card h-100">
         <div class="card-header d-flex align-items-center justify-content-between">
           <span><i class="bi bi-briefcase me-2 text-primary"></i>Commesse in corso</span>
-          <a href="<?= APP_URL ?>/pages/commesse.php" class="btn btn-sm btn-outline-primary">
+          <a href="<?= APP_URL ?>/pages/pm_commesse.php" class="btn btn-sm btn-outline-primary">
             Tutte <i class="bi bi-arrow-right ms-1"></i>
           </a>
         </div>
@@ -73,7 +73,7 @@ include COMPONENTS_PATH . '/sidebar.php';
       </div>
     </div>
 
-    <!-- Grafico stato commesse -->
+    <!-- Grafico stato pm_commesse -->
     <div class="col-xl-4">
       <div class="card h-100">
         <div class="card-header">
@@ -92,7 +92,7 @@ include COMPONENTS_PATH . '/sidebar.php';
   <!-- RIGA 3: My Tasks + Scadenze + Avanzamento mensile -->
   <div class="row g-3 mb-4">
 
-    <!-- I miei tasks -->
+    <!-- I miei pm_tasks -->
     <div class="col-xl-4">
       <div class="card h-100">
         <div class="card-header d-flex align-items-center justify-content-between">
@@ -110,7 +110,7 @@ include COMPONENTS_PATH . '/sidebar.php';
       <div class="card h-100">
         <div class="card-header d-flex align-items-center justify-content-between">
           <span><i class="bi bi-alarm me-2 text-danger"></i>Scadenze prossime</span>
-          <a href="<?= APP_URL ?>/pages/scadenze.php" class="btn btn-sm btn-outline-danger btn-sm">
+          <a href="<?= APP_URL ?>/pages/pm_scadenze.php" class="btn btn-sm btn-outline-danger btn-sm">
             Tutte
           </a>
         </div>
@@ -193,8 +193,8 @@ async function loadDashboard() {
 }
 
 function renderKpi(kpi) {
-  const c  = kpi.commesse || {};
-  const t  = kpi.tasks    || {};
+  const c  = kpi.pm_commesse || {};
+  const t  = kpi.pm_tasks    || {};
   const cards = [
     {
       cls:   'kpi-primary',
@@ -202,7 +202,7 @@ function renderKpi(kpi) {
       label: 'Commesse Totali',
       value: c.totale || 0,
       sub:   `${c.in_esecuzione || 0} in esecuzione`,
-      link:  '/pages/commesse.php',
+      link:  '/pages/pm_commesse.php',
     },
     {
       cls:   'kpi-warning',
@@ -218,7 +218,7 @@ function renderKpi(kpi) {
       label: 'SAL da Approvare',
       value: kpi.sal_da_approvare || 0,
       sub:   'In attesa di approvazione',
-      link:  '/pages/sal.php',
+      link:  '/pages/pm_sal.php',
     },
     {
       cls:   'kpi-danger',
@@ -226,7 +226,7 @@ function renderKpi(kpi) {
       label: 'Scadenze Scadute',
       value: kpi.scadenze_scadute || 0,
       sub:   'Richiedono azione urgente',
-      link:  '/pages/scadenze.php',
+      link:  '/pages/pm_scadenze.php',
     },
     {
       cls:   'kpi-purple',
@@ -251,13 +251,13 @@ function renderKpi(kpi) {
     </div>`).join('');
 }
 
-function renderCommesse(commesse) {
+function renderCommesse(pm_commesse) {
   const el = document.getElementById('commesseList');
-  if (!commesse.length) {
+  if (!pm_commesse.length) {
     el.innerHTML = '<div class="text-center text-muted py-4"><i class="bi bi-briefcase fs-2"></i><p class="mt-2 small">Nessuna commessa in corso</p></div>';
     return;
   }
-  el.innerHTML = commesse.map(c => {
+  el.innerHTML = pm_commesse.map(c => {
     const perc       = parseFloat(c.percentuale_avanzamento) || 0;
     const inRitardo  = c.in_ritardo;
     const tasksRit   = parseInt(c.tasks_ritardo) || 0;
@@ -285,14 +285,14 @@ function renderCommesse(commesse) {
   }).join('');
 }
 
-function renderMyTasks(tasks) {
+function renderMyTasks(pm_tasks) {
   const el = document.getElementById('myTasksList');
-  document.getElementById('myTasksBadge').textContent = tasks.length;
-  if (!tasks.length) {
+  document.getElementById('myTasksBadge').textContent = pm_tasks.length;
+  if (!pm_tasks.length) {
     el.innerHTML = '<div class="text-center text-muted py-4 small"><i class="bi bi-check-all fs-3 text-success"></i><p class="mt-2">Nessun task assegnato</p></div>';
     return;
   }
-  el.innerHTML = tasks.map(t => {
+  el.innerHTML = pm_tasks.map(t => {
     const urgente = parseInt(t.giorni_alla_scadenza) <= 3;
     const statoColor = t.stato === 'IN_RITARDO' ? 'danger' : t.stato === 'IN_CORSO' ? 'primary' : 'secondary';
     return `
@@ -308,13 +308,13 @@ function renderMyTasks(tasks) {
   }).join('');
 }
 
-function renderScadenze(scadenze) {
+function renderScadenze(pm_scadenze) {
   const el = document.getElementById('scadenzeList');
-  if (!scadenze.length) {
+  if (!pm_scadenze.length) {
     el.innerHTML = '<div class="text-center text-muted py-4 small"><i class="bi bi-calendar-check fs-3 text-success"></i><p class="mt-2">Nessuna scadenza urgente</p></div>';
     return;
   }
-  el.innerHTML = scadenze.map(s => {
+  el.innerHTML = pm_scadenze.map(s => {
     const gg      = parseInt(s.giorni);
     const urgente = gg <= 3;
     const cls     = gg <= 0 ? 'danger' : urgente ? 'warning' : 'info';
@@ -333,13 +333,13 @@ function renderScadenze(scadenze) {
 }
 
 function renderCharts(data) {
-  // Doughnut stato commesse
-  const statoData = (data.kpi?.commesse
+  // Doughnut stato pm_commesse
+  const statoData = (data.kpi?.pm_commesse
     ? [
-        { stato: 'In esecuzione', n: data.kpi.commesse.in_esecuzione },
-        { stato: 'Completate',    n: data.kpi.commesse.completate },
-        { stato: 'Sospese',       n: data.kpi.commesse.sospese },
-        { stato: 'Pianificazione',n: data.kpi.commesse.in_pianificazione },
+        { stato: 'In esecuzione', n: data.kpi.pm_commesse.in_esecuzione },
+        { stato: 'Completate',    n: data.kpi.pm_commesse.completate },
+        { stato: 'Sospese',       n: data.kpi.pm_commesse.sospese },
+        { stato: 'Pianificazione',n: data.kpi.pm_commesse.in_pianificazione },
       ].filter(d => d.n > 0)
     : []);
   if (statoData.length) chartStatoCommesse('chartStato', statoData);

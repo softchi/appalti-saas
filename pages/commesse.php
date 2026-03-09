@@ -5,13 +5,13 @@
 define('APP_INIT', true);
 require_once __DIR__ . '/../php/bootstrap.php';
 Auth::require();
-if (!Auth::can('commesse.read')) {
+if (!Auth::can('pm_commesse.read')) {
     header('Location: ' . APP_URL . '/pages/dashboard.php');
     exit;
 }
 
 $pageTitle  = 'Commesse';
-$activeMenu = 'commesse';
+$activeMenu = 'pm_commesse';
 include __DIR__ . '/../components/header.php';
 include __DIR__ . '/../components/sidebar.php';
 ?>
@@ -29,7 +29,7 @@ include __DIR__ . '/../components/sidebar.php';
         </ol>
       </nav>
     </div>
-    <?php if (Auth::can('commesse.create')): ?>
+    <?php if (Auth::can('pm_commesse.create')): ?>
     <button class="btn btn-primary" id="btnNuovaCommessa">
       <i class="bi bi-plus-circle me-2"></i>Nuova Commessa
     </button>
@@ -446,12 +446,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================================
-// LOAD SELECT OPTIONS (SA, imprese, utenti)
+// LOAD SELECT OPTIONS (SA, pm_imprese, pm_utenti)
 // ============================================================
 async function loadSelectOptions() {
     try {
         // Stazioni appaltanti
-        const resSA = await API.get('/api/appalti.php?action=stazioni');
+        const resSA = await API.get('/api/pm_appalti.php?action=stazioni');
         if (resSA.data) {
             const selSA = document.getElementById('fStazioneAppaltante');
             const filterSA = document.getElementById('filterSA');
@@ -461,7 +461,7 @@ async function loadSelectOptions() {
             });
         }
         // Imprese
-        const resImp = await API.get('/api/appalti.php?action=imprese');
+        const resImp = await API.get('/api/pm_appalti.php?action=pm_imprese');
         if (resImp.data) {
             const selImp = document.getElementById('fImpresa');
             resImp.data.forEach(i => {
@@ -469,7 +469,7 @@ async function loadSelectOptions() {
             });
         }
         // Utenti
-        const resU = await API.get('/api/utenti.php?per_page=200');
+        const resU = await API.get('/api/pm_utenti.php?per_page=200');
         if (resU.data) {
             allUtenti = resU.data;
             ['fRup','fPm','fDl','fCse'].forEach(id => {
@@ -504,14 +504,14 @@ async function loadCommesse(page = 1) {
     });
 
     try {
-        const res = await API.get('/api/commesse.php?' + params.toString());
+        const res = await API.get('/api/pm_commesse.php?' + params.toString());
         renderKpi(res.meta || {});
         if (currentView === 'table') renderTable(res.data || []);
         else renderGrid(res.data || []);
         renderPagination(res.meta?.current_page || 1, res.meta?.last_page || 1,
             'paginazione', loadCommesse);
         document.getElementById('paginationInfo').textContent =
-            `${res.meta?.from ?? 0}–${res.meta?.to ?? 0} di ${res.meta?.total ?? 0} commesse`;
+            `${res.meta?.from ?? 0}–${res.meta?.to ?? 0} di ${res.meta?.total ?? 0} pm_commesse`;
     } catch(e) {
         document.getElementById('commesseBody').innerHTML =
             `<tr><td colspan="9" class="text-center text-danger py-4"><i class="bi bi-exclamation-triangle me-2"></i>${escapeHtml(e.message)}</td></tr>`;
@@ -722,7 +722,7 @@ async function openEdit(id) {
     modal.show();
 
     try {
-        const res = await API.get(`/api/commesse.php?id=${id}`);
+        const res = await API.get(`/api/pm_commesse.php?id=${id}`);
         const c = res.data;
         document.getElementById('commessaId').value = c.id;
         const fields = ['oggetto','cig','cup','data_consegna','data_fine_prevista','stato','note',
@@ -761,10 +761,10 @@ async function saveCommessa() {
     UI.showLoader();
     try {
         if (data.id) {
-            await API.put('/api/commesse.php', data);
+            await API.put('/api/pm_commesse.php', data);
             UI.success('Commessa aggiornata con successo');
         } else {
-            await API.post('/api/commesse.php', data);
+            await API.post('/api/pm_commesse.php', data);
             UI.success('Commessa creata con successo');
         }
         bootstrap.Modal.getInstance(document.getElementById('commessaModal')).hide();
@@ -786,7 +786,7 @@ async function deleteCommessa(id, codice) {
 
     UI.showLoader();
     try {
-        await API.delete('/api/commesse.php', { id });
+        await API.delete('/api/pm_commesse.php', { id });
         UI.success('Commessa eliminata');
         loadCommesse(currentPage);
     } catch(e) {

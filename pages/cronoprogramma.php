@@ -5,22 +5,22 @@
 define('APP_INIT', true);
 require_once __DIR__ . '/../php/bootstrap.php';
 
-Auth::require('tasks.read');
+Auth::require('pm_tasks.read');
 
 $commessaId = sanitizeInt($_GET['commessa_id'] ?? null, 1);
 
-// Lista commesse per dropdown
-$commesse = Database::fetchAll(
-    'SELECT id, codice_commessa, oggetto FROM commesse
+// Lista pm_commesse per dropdown
+$pm_commesse = Database::fetchAll(
+    'SELECT id, codice_commessa, oggetto FROM pm_commesse
      WHERE stato IN ("IN_ESECUZIONE","PIANIFICAZIONE") ORDER BY codice_commessa',
 );
 
-if (!$commessaId && !empty($commesse)) {
-    $commessaId = (int)$commesse[0]['id'];
+if (!$commessaId && !empty($pm_commesse)) {
+    $commessaId = (int)$pm_commesse[0]['id'];
 }
 
 $commessaSelezionata = $commessaId
-    ? Database::fetchOne('SELECT * FROM commesse WHERE id = :id', [':id' => $commessaId])
+    ? Database::fetchOne('SELECT * FROM pm_commesse WHERE id = :id', [':id' => $commessaId])
     : null;
 
 $pageTitle    = 'Cronoprogramma';
@@ -54,7 +54,7 @@ include COMPONENTS_PATH . '/sidebar.php';
   <div class="d-flex align-items-center gap-2">
     <label class="form-label mb-0 fw-semibold small text-nowrap">Commessa:</label>
     <select class="form-select form-select-sm" id="commessaSelect" style="min-width:260px;">
-      <?php foreach ($commesse as $c): ?>
+      <?php foreach ($pm_commesse as $c): ?>
       <option value="<?= e($c['id']) ?>" <?= $c['id'] == $commessaId ? 'selected' : '' ?>>
         <?= e($c['codice_commessa']) ?> – <?= e(mb_substr($c['oggetto'], 0, 50)) ?>
       </option>
@@ -64,7 +64,7 @@ include COMPONENTS_PATH . '/sidebar.php';
 
   <!-- Azioni -->
   <div class="d-flex gap-2">
-    <?php if (Auth::can('tasks.create')): ?>
+    <?php if (Auth::can('pm_tasks.create')): ?>
     <button class="btn btn-primary btn-sm" id="addTaskBtn">
       <i class="bi bi-plus-lg me-1"></i>Nuova attività
     </button>
@@ -195,7 +195,7 @@ async function loadGantt(commessaId) {
     '<div class="text-center p-5"><div class="spinner-border text-primary"></div><p class="mt-3">Caricamento cronoprogramma...</p></div>';
 
   try {
-    const data = await API.tasks.list(commessaId);
+    const data = await API.pm_tasks.list(commessaId);
 
     // Stats bar
     const s = data.stats || {};
@@ -232,7 +232,7 @@ async function loadGantt(commessaId) {
       onTaskClick: openTaskDetail,
     });
 
-    gantt.load(data.tasks || []);
+    gantt.load(data.pm_tasks || []);
     gantt.scrollToToday();
 
   } catch (err) {
@@ -299,10 +299,10 @@ document.getElementById('taskForm')?.addEventListener('submit', async (e) => {
 
   try {
     if (taskId) {
-      await API.tasks.update(taskId, data);
+      await API.pm_tasks.update(taskId, data);
       UI.success('Attività aggiornata con successo');
     } else {
-      await API.tasks.create(data);
+      await API.pm_tasks.create(data);
       UI.success('Attività creata con successo');
     }
     taskModalBS.hide();
@@ -337,15 +337,15 @@ document.getElementById('exportGanttBtn')?.addEventListener('click', async () =>
   } catch (err) { UI.error('Errore esportazione'); }
 });
 
-// Carica utenti nel select
+// Carica pm_utenti nel select
 async function loadUtentiSelect() {
   try {
-    const data = await API.utenti.dropdown();
+    const data = await API.pm_utenti.dropdown();
     const sel  = document.getElementById('tf_assegnato_a');
     if (!sel) return;
     const current = sel.value;
     sel.innerHTML = '<option value="">— Non assegnato —</option>' +
-      (data.utenti || []).map(u =>
+      (data.pm_utenti || []).map(u =>
         `<option value="${u.id}" ${u.id == current ? 'selected' : ''}>${escapeHtml(u.nome_completo)}</option>`
       ).join('');
   } catch { /* silenzioso */ }

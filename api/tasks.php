@@ -2,12 +2,12 @@
 /**
  * API REST: Gestione Tasks / Cronoprogramma
  *
- * GET  /api/tasks.php?commessa_id=N          - Lista tasks commessa (struttura Gantt)
- * GET  /api/tasks.php?id=N                   - Dettaglio task
- * POST /api/tasks.php                        - Crea task
- * PUT  /api/tasks.php?id=N                   - Aggiorna task (incluso completamento %)
- * DELETE /api/tasks.php?id=N                 - Elimina task
- * POST /api/tasks.php?action=reorder         - Riordina tasks
+ * GET  /api/pm_tasks.php?commessa_id=N          - Lista pm_tasks commessa (struttura Gantt)
+ * GET  /api/pm_tasks.php?id=N                   - Dettaglio task
+ * POST /api/pm_tasks.php                        - Crea task
+ * PUT  /api/pm_tasks.php?id=N                   - Aggiorna task (incluso completamento %)
+ * DELETE /api/pm_tasks.php?id=N                 - Elimina task
+ * POST /api/pm_tasks.php?action=reorder         - Riordina pm_tasks
  *
  * @version 1.0.0
  */
@@ -16,7 +16,7 @@ require_once __DIR__ . '/../php/bootstrap.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 if (!Auth::check()) jsonError('Non autenticato', 401);
-if (!Auth::can('tasks.read')) jsonError('Permesso negato', 403);
+if (!Auth::can('pm_tasks.read')) jsonError('Permesso negato', 403);
 
 $method     = strtoupper($_SERVER['REQUEST_METHOD']);
 $id         = sanitizeInt($_GET['id'] ?? null, 1);
@@ -39,21 +39,21 @@ switch ($method) {
         if ($action === 'reorder') {
             reorderTasks();
         } else {
-            if (!Auth::can('tasks.create')) jsonError('Permesso negato', 403);
+            if (!Auth::can('pm_tasks.create')) jsonError('Permesso negato', 403);
             createTask();
         }
         break;
 
     case 'PUT':
         if (!$id) jsonError('ID task richiesto', 400);
-        if (!Auth::can('tasks.update')) jsonError('Permesso negato', 403);
+        if (!Auth::can('pm_tasks.update')) jsonError('Permesso negato', 403);
         Auth::requireCsrf();
         updateTask($id);
         break;
 
     case 'DELETE':
         if (!$id) jsonError('ID task richiesto', 400);
-        if (!Auth::can('tasks.delete')) jsonError('Permesso negato', 403);
+        if (!Auth::can('pm_tasks.delete')) jsonError('Permesso negato', 403);
         Auth::requireCsrf();
         deleteTask($id);
         break;
@@ -70,28 +70,28 @@ function listTasks(int $commessaId): never
         jsonError('Accesso negato', 403);
     }
 
-    // Recupera tasks strutturati per Gantt
-    $tasks = Database::fetchAll(
+    // Recupera pm_tasks strutturati per Gantt
+    $pm_tasks = Database::fetchAll(
         'SELECT t.*,
                 CONCAT(u.cognome, " ", u.nome) AS assegnato_nome,
                 u.avatar_path,
                 f.nome AS fase_nome, f.colore AS fase_colore,
-                (SELECT COUNT(*) FROM tasks sub WHERE sub.parent_id = t.id) AS n_subtasks
-         FROM tasks t
-         LEFT JOIN utenti u ON u.id = t.assegnato_a
-         LEFT JOIN fasi_lavoro f ON f.id = t.fase_id
+                (SELECT COUNT(*) FROM pm_tasks sub WHERE sub.parent_id = t.id) AS n_subtasks
+         FROM pm_tasks t
+         LEFT JOIN pm_utenti u ON u.id = t.assegnato_a
+         LEFT JOIN pm_fasi_lavoro f ON f.id = t.fase_id
          WHERE t.commessa_id = :cid
          ORDER BY t.ordine ASC, t.data_inizio_prevista ASC',
         [':cid' => $commessaId]
     );
 
     // Recupera dipendenze
-    $taskIds = array_column($tasks, 'id');
+    $taskIds = array_column($pm_tasks, 'id');
     $dipendenze = [];
     if (!empty($taskIds)) {
         $placeholders = implode(',', array_fill(0, count($taskIds), '?'));
         $dipendenze = Database::fetchAll(
-            "SELECT * FROM dipendenze_tasks WHERE task_id IN ({$placeholders}) OR task_pred_id IN ({$placeholders})",
+            "SELECT * FROM pm_dipendenze_tasks WHERE task_id IN ({$placeholders}) OR task_pred_id IN ({$placeholders})",
             array_merge($taskIds, $taskIds)
         );
     }
@@ -100,7 +100,7 @@ function listTasks(int $commessaId): never
     $taskMap    = [];
     $rootTasks  = [];
 
-    foreach ($tasks as &$task) {
+    foreach ($pm_tasks as &$task) {
         $task['subtasks']    = [];
         $task['dipendenze']  = [];
         // Formatta date
@@ -119,7 +119,7 @@ function listTasks(int $commessaId): never
     }
 
     // Struttura ad albero
-    foreach ($tasks as &$task) {
+    foreach ($pm_tasks as &$task) {
         if ($task['parent_id'] && isset($taskMap[$task['parent_id']])) {
             $taskMap[$task['parent_id']]['subtasks'][] = &$task;
         } else {
@@ -140,12 +140,12 @@ function listTasks(int $commessaId): never
            AVG(percentuale_completamento) AS media_completamento,
            MIN(data_inizio_prevista) AS data_inizio_progetto,
            MAX(data_fine_prevista) AS data_fine_progetto
-         FROM tasks WHERE commessa_id = :cid',
+         FROM pm_tasks WHERE commessa_id = :cid',
         [':cid' => $commessaId]
     );
 
     jsonResponse([
-        'tasks'      => $rootTasks,
+        'pm_tasks'      => $rootTasks,
         'stats'      => $stats,
         'commessa_id' => $commessaId,
     ]);
@@ -155,9 +155,9 @@ function getTask(int $id): never
 {
     $task = Database::fetchOne(
         'SELECT t.*, CONCAT(u.cognome, " ", u.nome) AS assegnato_nome, f.nome AS fase_nome
-         FROM tasks t
-         LEFT JOIN utenti u ON u.id = t.assegnato_a
-         LEFT JOIN fasi_lavoro f ON f.id = t.fase_id
+         FROM pm_tasks t
+         LEFT JOIN pm_utenti u ON u.id = t.assegnato_a
+         LEFT JOIN pm_fasi_lavoro f ON f.id = t.fase_id
          WHERE t.id = :id',
         [':id' => $id]
     );
@@ -167,16 +167,16 @@ function getTask(int $id): never
     // Dipendenze
     $task['predecessori'] = Database::fetchAll(
         'SELECT dt.*, t.nome AS task_nome, t.codice_wbs
-         FROM dipendenze_tasks dt
-         JOIN tasks t ON t.id = dt.task_pred_id
+         FROM pm_dipendenze_tasks dt
+         JOIN pm_tasks t ON t.id = dt.task_pred_id
          WHERE dt.task_id = :id',
         [':id' => $id]
     );
 
     $task['successori'] = Database::fetchAll(
         'SELECT dt.*, t.nome AS task_nome, t.codice_wbs
-         FROM dipendenze_tasks dt
-         JOIN tasks t ON t.id = dt.task_id
+         FROM pm_dipendenze_tasks dt
+         JOIN pm_tasks t ON t.id = dt.task_id
          WHERE dt.task_pred_id = :id',
         [':id' => $id]
     );
@@ -207,7 +207,7 @@ function createTask(): never
 
     // Ordine: posiziona in fondo
     $maxOrdine = (int)Database::fetchValue(
-        'SELECT COALESCE(MAX(ordine), 0) FROM tasks WHERE commessa_id = :cid AND COALESCE(parent_id, 0) = :pid',
+        'SELECT COALESCE(MAX(ordine), 0) FROM pm_tasks WHERE commessa_id = :cid AND COALESCE(parent_id, 0) = :pid',
         [':cid' => $commessaId, ':pid' => $parentId ?? 0]
     );
 
@@ -236,7 +236,7 @@ function createTask(): never
 
     Database::beginTransaction();
     try {
-        $taskId = Database::insert('tasks', $data);
+        $taskId = Database::insert('pm_tasks', $data);
 
         // Aggiungi dipendenze se specificate
         if (!empty($body['predecessori']) && is_array($body['predecessori'])) {
@@ -244,7 +244,7 @@ function createTask(): never
                 $predId = sanitizeInt($pred['task_id'] ?? null, 1);
                 $tipo   = in_array($pred['tipo'] ?? '', ['FS','SS','FF','SF']) ? $pred['tipo'] : 'FS';
                 if ($predId) {
-                    Database::insert('dipendenze_tasks', [
+                    Database::insert('pm_dipendenze_tasks', [
                         'task_id'      => $taskId,
                         'task_pred_id' => $predId,
                         'tipo'         => $tipo,
@@ -255,7 +255,7 @@ function createTask(): never
         }
 
         Database::commit();
-        Logger::audit('CREATE', 'tasks', $taskId, null, $data);
+        Logger::audit('CREATE', 'pm_tasks', $taskId, null, $data);
         jsonSuccess('Attività creata con successo', ['id' => $taskId, 'codice_wbs' => $codicewbs], 201);
 
     } catch (Throwable $e) {
@@ -267,7 +267,7 @@ function createTask(): never
 
 function updateTask(int $id): never
 {
-    $existing = Database::fetchOne('SELECT * FROM tasks WHERE id = :id', [':id' => $id]);
+    $existing = Database::fetchOne('SELECT * FROM pm_tasks WHERE id = :id', [':id' => $id]);
     if (!$existing) jsonError('Task non trovato', 404);
 
     if (!Auth::canAccessCommessa((int)$existing['commessa_id']) && !Auth::hasRole(['SUPERADMIN','ADMIN'])) {
@@ -322,45 +322,45 @@ function updateTask(int $id): never
 
     if (empty($updateData)) jsonError('Nessun dato da aggiornare', 400);
 
-    Database::update('tasks', $updateData, ['id' => $id]);
+    Database::update('pm_tasks', $updateData, ['id' => $id]);
 
     // Aggiorna avanzamento commessa
     updateCommessaAvanzamento((int)$existing['commessa_id']);
 
-    Logger::audit('UPDATE', 'tasks', $id, $existing, $updateData);
+    Logger::audit('UPDATE', 'pm_tasks', $id, $existing, $updateData);
     jsonSuccess('Attività aggiornata', ['id' => $id]);
 }
 
 function deleteTask(int $id): never
 {
-    $existing = Database::fetchOne('SELECT * FROM tasks WHERE id = :id', [':id' => $id]);
+    $existing = Database::fetchOne('SELECT * FROM pm_tasks WHERE id = :id', [':id' => $id]);
     if (!$existing) jsonError('Task non trovato', 404);
 
     // Verifica che non abbia subtasks
     $children = (int)Database::fetchValue(
-        'SELECT COUNT(*) FROM tasks WHERE parent_id = :id', [':id' => $id]
+        'SELECT COUNT(*) FROM pm_tasks WHERE parent_id = :id', [':id' => $id]
     );
     if ($children > 0) {
         jsonError('Impossibile eliminare un task con sotto-attività. Eliminare prima le sotto-attività.', 409);
     }
 
-    Database::delete('tasks', ['id' => $id]);
+    Database::delete('pm_tasks', ['id' => $id]);
     updateCommessaAvanzamento((int)$existing['commessa_id']);
 
-    Logger::audit('DELETE', 'tasks', $id, $existing, null);
+    Logger::audit('DELETE', 'pm_tasks', $id, $existing, null);
     jsonSuccess('Attività eliminata');
 }
 
 function reorderTasks(): never
 {
     $body = getJsonBody();
-    if (empty($body['tasks']) || !is_array($body['tasks'])) {
-        jsonError('Lista tasks richiesta', 400);
+    if (empty($body['pm_tasks']) || !is_array($body['pm_tasks'])) {
+        jsonError('Lista pm_tasks richiesta', 400);
     }
 
     Database::beginTransaction();
     try {
-        foreach ($body['tasks'] as $item) {
+        foreach ($body['pm_tasks'] as $item) {
             $taskId   = sanitizeInt($item['id'] ?? null, 1);
             $ordine   = sanitizeInt($item['ordine'] ?? 0, 0);
             $parentId = sanitizeInt($item['parent_id'] ?? null, 1) ?? null;
@@ -371,7 +371,7 @@ function reorderTasks(): never
             if (array_key_exists('parent_id', $item)) {
                 $updateData['parent_id'] = $parentId;
             }
-            Database::update('tasks', $updateData, ['id' => $taskId]);
+            Database::update('pm_tasks', $updateData, ['id' => $taskId]);
         }
         Database::commit();
         jsonSuccess('Ordine aggiornato');
@@ -389,20 +389,20 @@ function generateWbsCode(int $commessaId, ?int $parentId): string
 {
     if ($parentId) {
         $parent = Database::fetchOne(
-            'SELECT codice_wbs FROM tasks WHERE id = :id',
+            'SELECT codice_wbs FROM pm_tasks WHERE id = :id',
             [':id' => $parentId]
         );
         $parentWbs = $parent['codice_wbs'] ?? '1';
 
         $siblings = (int)Database::fetchValue(
-            'SELECT COUNT(*) FROM tasks WHERE commessa_id = :cid AND parent_id = :pid',
+            'SELECT COUNT(*) FROM pm_tasks WHERE commessa_id = :cid AND parent_id = :pid',
             [':cid' => $commessaId, ':pid' => $parentId]
         );
         return $parentWbs . '.' . ($siblings + 1);
     }
 
     $root = (int)Database::fetchValue(
-        'SELECT COUNT(*) FROM tasks WHERE commessa_id = :cid AND parent_id IS NULL',
+        'SELECT COUNT(*) FROM pm_tasks WHERE commessa_id = :cid AND parent_id IS NULL',
         [':cid' => $commessaId]
     );
     return (string)($root + 1);
@@ -412,11 +412,11 @@ function updateCommessaAvanzamento(int $commessaId): void
 {
     $avg = Database::fetchValue(
         'SELECT COALESCE(AVG(percentuale_completamento), 0)
-         FROM tasks WHERE commessa_id = :cid AND tipo != "SOMMARIO" AND stato != "ANNULLATO"',
+         FROM pm_tasks WHERE commessa_id = :cid AND tipo != "SOMMARIO" AND stato != "ANNULLATO"',
         [':cid' => $commessaId]
     );
 
-    Database::update('commesse', [
+    Database::update('pm_commesse', [
         'percentuale_avanzamento' => round((float)$avg, 2),
         'updated_by'              => Auth::id(),
     ], ['id' => $commessaId]);

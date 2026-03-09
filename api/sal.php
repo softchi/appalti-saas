@@ -2,11 +2,11 @@
 /**
  * API REST: SAL - Stato Avanzamento Lavori
  *
- * GET    /api/sal.php?commessa_id=N   - Lista SAL commessa
- * GET    /api/sal.php?id=N            - Dettaglio SAL
- * POST   /api/sal.php                 - Crea SAL
- * PUT    /api/sal.php?id=N            - Aggiorna/approva SAL
- * POST   /api/sal.php?action=approve  - Approva SAL (RUP/DL)
+ * GET    /api/pm_sal.php?commessa_id=N   - Lista SAL commessa
+ * GET    /api/pm_sal.php?id=N            - Dettaglio SAL
+ * POST   /api/pm_sal.php                 - Crea SAL
+ * PUT    /api/pm_sal.php?id=N            - Aggiorna/approva SAL
+ * POST   /api/pm_sal.php?action=approve  - Approva SAL (RUP/DL)
  *
  * @version 1.0.0
  */
@@ -15,7 +15,7 @@ require_once __DIR__ . '/../php/bootstrap.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 if (!Auth::check()) jsonError('Non autenticato', 401);
-if (!Auth::can('sal.read')) jsonError('Permesso negato', 403);
+if (!Auth::can('pm_sal.read')) jsonError('Permesso negato', 403);
 
 $method     = strtoupper($_SERVER['REQUEST_METHOD']);
 $id         = sanitizeInt($_GET['id'] ?? null, 1);
@@ -30,17 +30,17 @@ switch ($method) {
     case 'POST':
         Auth::requireCsrf();
         if ($action === 'approve') {
-            if (!Auth::can('sal.approve')) jsonError('Permesso negato', 403);
+            if (!Auth::can('pm_sal.approve')) jsonError('Permesso negato', 403);
             approveSal($id ?? 0);
         } else {
-            if (!Auth::can('sal.create')) jsonError('Permesso negato', 403);
+            if (!Auth::can('pm_sal.create')) jsonError('Permesso negato', 403);
             createSal();
         }
         break;
 
     case 'PUT':
         if (!$id) jsonError('ID SAL richiesto', 400);
-        if (!Auth::can('sal.update')) jsonError('Permesso negato', 403);
+        if (!Auth::can('pm_sal.update')) jsonError('Permesso negato', 403);
         Auth::requireCsrf();
         updateSal($id);
         break;
@@ -55,13 +55,13 @@ function listSal(int $commessaId): never
 {
     if (!$commessaId) jsonError('commessa_id richiesto', 400);
 
-    $sal = Database::fetchAll(
+    $pm_sal = Database::fetchAll(
         'SELECT s.*,
                 CONCAT(udl.cognome, " ", udl.nome) AS dl_nome,
                 CONCAT(urup.cognome, " ", urup.nome) AS rup_nome
-         FROM sal s
-         LEFT JOIN utenti udl ON udl.id = s.dl_id
-         LEFT JOIN utenti urup ON urup.id = s.rup_id
+         FROM pm_sal s
+         LEFT JOIN pm_utenti udl ON udl.id = s.dl_id
+         LEFT JOIN pm_utenti urup ON urup.id = s.rup_id
          WHERE s.commessa_id = :cid
          ORDER BY s.numero_sal DESC',
         [':cid' => $commessaId]
@@ -69,7 +69,7 @@ function listSal(int $commessaId): never
 
     // Recupera importo contrattuale per calcolo residuo
     $commessa = Database::fetchOne(
-        'SELECT importo_contrattuale, importo_sicurezza, importo_varianti FROM commesse WHERE id = :id',
+        'SELECT importo_contrattuale, importo_sicurezza, importo_varianti FROM pm_commesse WHERE id = :id',
         [':id' => $commessaId]
     );
 
@@ -79,14 +79,14 @@ function listSal(int $commessaId): never
 
     // Ultimo importo cumulato
     $ultimoCumulato = 0;
-    foreach ($sal as $s) {
+    foreach ($pm_sal as $s) {
         if (in_array($s['stato'], ['APPROVATO', 'PAGATO'])) {
             $ultimoCumulato = max($ultimoCumulato, (float)$s['importo_cumulato']);
         }
     }
 
     // Formatta SAL
-    $sal = array_map(function($s) {
+    $pm_sal = array_map(function($s) {
         $s['importo_totale_fmt']   = formatEuro((float)$s['importo_totale']);
         $s['importo_cumulato_fmt'] = formatEuro((float)$s['importo_cumulato']);
         $s['importo_netto_fmt']    = formatEuro((float)$s['importo_netto']);
@@ -94,10 +94,10 @@ function listSal(int $commessaId): never
         $s['data_fine_it']         = formatDate($s['data_fine']);
         $s['data_emissione_it']    = formatDate($s['data_emissione']);
         return $s;
-    }, $sal);
+    }, $pm_sal);
 
     jsonResponse([
-        'sal'             => $sal,
+        'pm_sal'             => $pm_sal,
         'importo_totale'  => $importoTotale,
         'importo_totale_fmt' => formatEuro($importoTotale),
         'importo_liquidato' => $ultimoCumulato,
@@ -111,21 +111,21 @@ function listSal(int $commessaId): never
 
 function getSal(int $id): never
 {
-    $sal = Database::fetchOne(
+    $pm_sal = Database::fetchOne(
         'SELECT s.*,
                 CONCAT(udl.cognome, " ", udl.nome) AS dl_nome,
                 CONCAT(urup.cognome, " ", urup.nome) AS rup_nome,
                 c.codice_commessa, c.oggetto AS commessa_oggetto,
                 c.importo_contrattuale
-         FROM sal s
-         LEFT JOIN utenti udl ON udl.id = s.dl_id
-         LEFT JOIN utenti urup ON urup.id = s.rup_id
-         JOIN commesse c ON c.id = s.commessa_id
+         FROM pm_sal s
+         LEFT JOIN pm_utenti udl ON udl.id = s.dl_id
+         LEFT JOIN pm_utenti urup ON urup.id = s.rup_id
+         JOIN pm_commesse c ON c.id = s.commessa_id
          WHERE s.id = :id',
         [':id' => $id]
     );
 
-    if (!$sal) jsonError('SAL non trovato', 404);
+    if (!$pm_sal) jsonError('SAL non trovato', 404);
 
     // Voci SAL
     $voci = Database::fetchAll(
@@ -133,21 +133,21 @@ function getSal(int $id): never
                 cl.codice, cl.descrizione, cl.unita_misura, cl.prezzo_unitario,
                 cl.quantita_contrattuale,
                 sv.quantita_periodo * cl.prezzo_unitario AS importo_periodo_calc
-         FROM sal_voci sv
-         JOIN categorie_lavoro cl ON cl.id = sv.categoria_id
+         FROM pm_sal_voci sv
+         JOIN pm_categorie_lavoro cl ON cl.id = sv.categoria_id
          WHERE sv.sal_id = :sid
          ORDER BY cl.ordine, cl.codice',
         [':sid' => $id]
     );
 
     // Formatta
-    $sal['data_inizio_it']      = formatDate($sal['data_inizio']);
-    $sal['data_fine_it']        = formatDate($sal['data_fine']);
-    $sal['importo_totale_fmt']  = formatEuro((float)$sal['importo_totale']);
-    $sal['importo_netto_fmt']   = formatEuro((float)$sal['importo_netto']);
-    $sal['importo_cumulato_fmt'] = formatEuro((float)$sal['importo_cumulato']);
+    $pm_sal['data_inizio_it']      = formatDate($pm_sal['data_inizio']);
+    $pm_sal['data_fine_it']        = formatDate($pm_sal['data_fine']);
+    $pm_sal['importo_totale_fmt']  = formatEuro((float)$pm_sal['importo_totale']);
+    $pm_sal['importo_netto_fmt']   = formatEuro((float)$pm_sal['importo_netto']);
+    $pm_sal['importo_cumulato_fmt'] = formatEuro((float)$pm_sal['importo_cumulato']);
 
-    jsonResponse(['sal' => $sal, 'voci' => $voci]);
+    jsonResponse(['pm_sal' => $pm_sal, 'voci' => $voci]);
 }
 
 function createSal(): never
@@ -167,7 +167,7 @@ function createSal(): never
     // Verifica commessa esiste
     $commessa = Database::fetchOne(
         'SELECT id, importo_contrattuale, importo_sicurezza, importo_varianti, stato
-         FROM commesse WHERE id = :id',
+         FROM pm_commesse WHERE id = :id',
         [':id' => $commessaId]
     );
     if (!$commessa) jsonError('Commessa non trovata', 404);
@@ -177,14 +177,14 @@ function createSal(): never
 
     // Numero SAL progressivo
     $ultimoNumero = (int)Database::fetchValue(
-        'SELECT COALESCE(MAX(numero_sal), 0) FROM sal WHERE commessa_id = :cid',
+        'SELECT COALESCE(MAX(numero_sal), 0) FROM pm_sal WHERE commessa_id = :cid',
         [':cid' => $commessaId]
     );
     $numeroSal = $ultimoNumero + 1;
 
     // Calcola importo cumulato precedente
     $cumulatoPrecedente = (float)(Database::fetchValue(
-        'SELECT COALESCE(MAX(importo_cumulato), 0) FROM sal
+        'SELECT COALESCE(MAX(importo_cumulato), 0) FROM pm_sal
          WHERE commessa_id = :cid AND stato IN ("APPROVATO", "PAGATO")',
         [':cid' => $commessaId]
     ) ?? 0);
@@ -205,7 +205,7 @@ function createSal(): never
 
     Database::beginTransaction();
     try {
-        $salId = Database::insert('sal', [
+        $salId = Database::insert('pm_sal', [
             'uuid'                    => generateUUID(),
             'commessa_id'             => $commessaId,
             'numero_sal'              => $numeroSal,
@@ -230,7 +230,7 @@ function createSal(): never
                 $catId = sanitizeInt($voce['categoria_id'] ?? null, 1);
                 if (!$catId) continue;
 
-                Database::insert('sal_voci', [
+                Database::insert('pm_sal_voci', [
                     'sal_id'             => $salId,
                     'categoria_id'       => $catId,
                     'quantita_periodo'   => round((float)($voce['quantita_periodo'] ?? 0), 4),
@@ -242,18 +242,18 @@ function createSal(): never
 
         Database::commit();
 
-        Logger::audit('CREATE', 'sal', $salId, null, ['numero_sal' => $numeroSal, 'commessa_id' => $commessaId]);
+        Logger::audit('CREATE', 'pm_sal', $salId, null, ['numero_sal' => $numeroSal, 'commessa_id' => $commessaId]);
 
         // Notifica RUP per approvazione
-        $commessaData = Database::fetchOne('SELECT rup_id, oggetto FROM commesse WHERE id = :id', [':id' => $commessaId]);
+        $commessaData = Database::fetchOne('SELECT rup_id, oggetto FROM pm_commesse WHERE id = :id', [':id' => $commessaId]);
         if ($commessaData['rup_id']) {
             createNotification(
                 (int)$commessaData['rup_id'],
                 'SAL',
                 "SAL N.{$numeroSal} in attesa di approvazione",
                 "È stato emesso il SAL N.{$numeroSal} per la commessa: {$commessaData['oggetto']}",
-                "/pages/sal-detail.php?id={$salId}",
-                'sal', $salId
+                "/pages/pm_sal-detail.php?id={$salId}",
+                'pm_sal', $salId
             );
         }
 
@@ -271,7 +271,7 @@ function createSal(): never
 
 function updateSal(int $id): never
 {
-    $existing = Database::fetchOne('SELECT * FROM sal WHERE id = :id', [':id' => $id]);
+    $existing = Database::fetchOne('SELECT * FROM pm_sal WHERE id = :id', [':id' => $id]);
     if (!$existing) jsonError('SAL non trovato', 404);
 
     if (in_array($existing['stato'], ['APPROVATO', 'PAGATO'])) {
@@ -308,7 +308,7 @@ function updateSal(int $id): never
         $var      = (float)($updateData['importo_varianti']  ?? $existing['importo_varianti']);
         $tot      = $lavori + $sic + $var;
         $cumulPrec = (float)(Database::fetchValue(
-            'SELECT COALESCE(MAX(importo_cumulato), 0) FROM sal
+            'SELECT COALESCE(MAX(importo_cumulato), 0) FROM pm_sal
              WHERE commessa_id = :cid AND numero_sal < :n AND stato IN ("APPROVATO","PAGATO")',
             [':cid' => $existing['commessa_id'], ':n' => $existing['numero_sal']]
         ) ?? 0);
@@ -317,8 +317,8 @@ function updateSal(int $id): never
         $updateData['ritenuta_garanzia']   = round($tot * 0.05, 2);
     }
 
-    Database::update('sal', $updateData, ['id' => $id]);
-    Logger::audit('UPDATE', 'sal', $id, $existing, $updateData);
+    Database::update('pm_sal', $updateData, ['id' => $id]);
+    Logger::audit('UPDATE', 'pm_sal', $id, $existing, $updateData);
     jsonSuccess('SAL aggiornato con successo');
 }
 
@@ -326,15 +326,15 @@ function approveSal(int $id): never
 {
     if (!$id) jsonError('ID SAL richiesto', 400);
 
-    $sal = Database::fetchOne('SELECT * FROM sal WHERE id = :id', [':id' => $id]);
-    if (!$sal) jsonError('SAL non trovato', 404);
-    if ($sal['stato'] === 'APPROVATO') jsonError('SAL già approvato', 409);
-    if ($sal['stato'] === 'PAGATO') jsonError('SAL già pagato', 409);
+    $pm_sal = Database::fetchOne('SELECT * FROM pm_sal WHERE id = :id', [':id' => $id]);
+    if (!$pm_sal) jsonError('SAL non trovato', 404);
+    if ($pm_sal['stato'] === 'APPROVATO') jsonError('SAL già approvato', 409);
+    if ($pm_sal['stato'] === 'PAGATO') jsonError('SAL già pagato', 409);
 
     $body = !empty($_POST) ? $_POST : getJsonBody();
     $noteRup = sanitizeString($body['note_rup'] ?? '', 65535);
 
-    Database::update('sal', [
+    Database::update('pm_sal', [
         'stato'              => 'APPROVATO',
         'rup_id'             => Auth::id(),
         'note_rup'           => $noteRup,
@@ -342,17 +342,17 @@ function approveSal(int $id): never
     ], ['id' => $id]);
 
     // Notifica DL che ha emesso il SAL
-    if ($sal['dl_id'] && $sal['dl_id'] != Auth::id()) {
+    if ($pm_sal['dl_id'] && $pm_sal['dl_id'] != Auth::id()) {
         createNotification(
-            (int)$sal['dl_id'],
+            (int)$pm_sal['dl_id'],
             'SAL',
-            "SAL N.{$sal['numero_sal']} approvato",
-            "Il SAL N.{$sal['numero_sal']} è stato approvato dal RUP",
-            "/pages/sal-detail.php?id={$id}",
-            'sal', $id
+            "SAL N.{$pm_sal['numero_sal']} approvato",
+            "Il SAL N.{$pm_sal['numero_sal']} è stato approvato dal RUP",
+            "/pages/pm_sal-detail.php?id={$id}",
+            'pm_sal', $id
         );
     }
 
-    Logger::audit('APPROVE', 'sal', $id, $sal, ['stato' => 'APPROVATO']);
-    jsonSuccess("SAL N.{$sal['numero_sal']} approvato con successo");
+    Logger::audit('APPROVE', 'pm_sal', $id, $pm_sal, ['stato' => 'APPROVATO']);
+    jsonSuccess("SAL N.{$pm_sal['numero_sal']} approvato con successo");
 }

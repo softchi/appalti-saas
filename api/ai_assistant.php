@@ -46,12 +46,12 @@ $commessa = Database::fetchOne(
             a.codice_cig, a.codice_cup,
             CONCAT(urup.cognome, " ", urup.nome) AS rup_nome,
             CONCAT(upm.cognome, " ", upm.nome) AS pm_nome
-     FROM commesse c
-     JOIN appalti a ON a.id = c.appalto_id
-     JOIN stazioni_appaltanti sa ON sa.id = a.stazione_appaltante_id
-     JOIN imprese i ON i.id = c.impresa_id
-     LEFT JOIN utenti urup ON urup.id = c.rup_id
-     LEFT JOIN utenti upm ON upm.id = c.pm_id
+     FROM pm_commesse c
+     JOIN pm_appalti a ON a.id = c.appalto_id
+     JOIN pm_stazioni_appaltanti sa ON sa.id = a.stazione_appaltante_id
+     JOIN pm_imprese i ON i.id = c.impresa_id
+     LEFT JOIN pm_utenti urup ON urup.id = c.rup_id
+     LEFT JOIN pm_utenti upm ON upm.id = c.pm_id
      WHERE c.id = :id',
     [':id' => $commessaId]
 );
@@ -69,7 +69,7 @@ $tasksStats = Database::fetchOne(
             AVG(percentuale_completamento) AS media_perc,
             MIN(data_inizio_prevista) AS prima_data,
             MAX(data_fine_prevista) AS ultima_data
-     FROM tasks WHERE commessa_id = :id AND stato != "ANNULLATO"',
+     FROM pm_tasks WHERE commessa_id = :id AND stato != "ANNULLATO"',
     [':id' => $commessaId]
 );
 
@@ -78,8 +78,8 @@ $tasksRitardo = Database::fetchAll(
     'SELECT t.nome, t.data_fine_prevista, t.percentuale_completamento, t.stato,
             DATEDIFF(CURDATE(), t.data_fine_prevista) AS giorni_ritardo,
             CONCAT(u.cognome, " ", u.nome) AS responsabile
-     FROM tasks t
-     LEFT JOIN utenti u ON u.id = t.assegnato_a
+     FROM pm_tasks t
+     LEFT JOIN pm_utenti u ON u.id = t.assegnato_a
      WHERE t.commessa_id = :id AND t.stato = "IN_RITARDO"
      ORDER BY giorni_ritardo DESC LIMIT 10',
     [':id' => $commessaId]
@@ -88,7 +88,7 @@ $tasksRitardo = Database::fetchAll(
 // SAL storico
 $salStorico = Database::fetchAll(
     'SELECT numero_sal, data_fine, importo_cumulato, percentuale_avanzamento, stato
-     FROM sal WHERE commessa_id = :id ORDER BY numero_sal DESC LIMIT 5',
+     FROM pm_sal WHERE commessa_id = :id ORDER BY numero_sal DESC LIMIT 5',
     [':id' => $commessaId]
 );
 
@@ -96,7 +96,7 @@ $salStorico = Database::fetchAll(
 $scadenzeCritiche = Database::fetchAll(
     'SELECT titolo, data_scadenza, tipo, priorita,
             DATEDIFF(data_scadenza, CURDATE()) AS giorni
-     FROM scadenze WHERE commessa_id = :id AND stato = "ATTIVA"
+     FROM pm_scadenze WHERE commessa_id = :id AND stato = "ATTIVA"
      AND data_scadenza <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
      ORDER BY data_scadenza ASC',
     [':id' => $commessaId]
@@ -134,17 +134,17 @@ jsonResponse([
 // =============================================================================
 
 function analisiClaude(
-    array $commessa, array $tasks, array $tasksRitardo,
-    array $sal, array $scadenze, array $spi,
+    array $commessa, array $pm_tasks, array $tasksRitardo,
+    array $pm_sal, array $pm_scadenze, array $spi,
     string $tipo, string $domanda
 ): array {
 
-    $prompt = buildPrompt($commessa, $tasks, $tasksRitardo, $sal, $scadenze, $spi, $tipo, $domanda);
+    $prompt = buildPrompt($commessa, $pm_tasks, $tasksRitardo, $pm_sal, $pm_scadenze, $spi, $tipo, $domanda);
 
     $payload = [
         'model'      => AI_MODEL,
         'max_tokens' => AI_MAX_TOKENS,
-        'system'     => "Sei un esperto di project management per lavori pubblici e appalti ai sensi del D.Lgs. 36/2023. " .
+        'system'     => "Sei un esperto di project management per lavori pubblici e pm_appalti ai sensi del D.Lgs. 36/2023. " .
                         "Analizza i dati progettuali forniti e rispondi in italiano in modo professionale, " .
                         "preciso e orientato alle azioni correttive. " .
                         "Usa un linguaggio tecnico-professionale appropriato per RUP, DL e PM.",
@@ -171,7 +171,7 @@ function analisiClaude(
 
     if ($httpCode !== 200 || !$response) {
         Logger::error('Claude API error', ['code' => $httpCode]);
-        return analisiRuleBased($commessa, $tasks, $tasksRitardo, $sal, $scadenze, $spi, $tipo);
+        return analisiRuleBased($commessa, $pm_tasks, $tasksRitardo, $pm_sal, $pm_scadenze, $spi, $tipo);
     }
 
     $data = json_decode($response, true);
@@ -186,8 +186,8 @@ function analisiClaude(
 }
 
 function buildPrompt(
-    array $commessa, array $tasks, array $tasksRitardo,
-    array $sal, array $scadenze, array $spi,
+    array $commessa, array $pm_tasks, array $tasksRitardo,
+    array $pm_sal, array $pm_scadenze, array $spi,
     string $tipo, string $domanda
 ): string {
 
@@ -212,12 +212,12 @@ function buildPrompt(
                ($spi['spi'] < 0.9 ? "⚠️ CRITICO" : ($spi['spi'] < 1.0 ? "⚠️ ATTENZIONE" : "✅ OK")) . "\n";
     $prompt .= "- Giorni di scostamento: " . abs($giorni) . ($giorni > 0 ? ' di RITARDO' : ' di ANTICIPO') . "\n\n";
 
-    $prompt .= "### STATO TASKS (totale: {$tasks['totale']})\n";
-    $prompt .= "- Completati: {$tasks['completati']}\n";
-    $prompt .= "- In corso: {$tasks['in_corso']}\n";
-    $prompt .= "- In ritardo: {$tasks['in_ritardo']}\n";
-    $prompt .= "- Non iniziati: {$tasks['non_iniziati']}\n";
-    $prompt .= "- Milestone: {$tasks['milestones']}\n\n";
+    $prompt .= "### STATO TASKS (totale: {$pm_tasks['totale']})\n";
+    $prompt .= "- Completati: {$pm_tasks['completati']}\n";
+    $prompt .= "- In corso: {$pm_tasks['in_corso']}\n";
+    $prompt .= "- In ritardo: {$pm_tasks['in_ritardo']}\n";
+    $prompt .= "- Non iniziati: {$pm_tasks['non_iniziati']}\n";
+    $prompt .= "- Milestone: {$pm_tasks['milestones']}\n\n";
 
     if (!empty($tasksRitardo)) {
         $prompt .= "### TASKS IN RITARDO\n";
@@ -230,9 +230,9 @@ function buildPrompt(
         $prompt .= "\n";
     }
 
-    if (!empty($sal)) {
+    if (!empty($pm_sal)) {
         $prompt .= "### STORICO SAL\n";
-        foreach ($sal as $s) {
+        foreach ($pm_sal as $s) {
             $prompt .= "- SAL N.{$s['numero_sal']}: " . formatDate($s['data_fine']) .
                        " | Cumulato: " . formatEuro((float)$s['importo_cumulato']) .
                        " | Avanz: {$s['percentuale_avanzamento']}% | Stato: {$s['stato']}\n";
@@ -240,9 +240,9 @@ function buildPrompt(
         $prompt .= "\n";
     }
 
-    if (!empty($scadenze)) {
+    if (!empty($pm_scadenze)) {
         $prompt .= "### SCADENZE PROSSIME (30 giorni)\n";
-        foreach ($scadenze as $sc) {
+        foreach ($pm_scadenze as $sc) {
             $urgenza = $sc['giorni'] <= 0 ? '🔴 SCADUTA' : ($sc['giorni'] <= 7 ? '🟠 URGENTE' : '🟡 PROSSIMA');
             $prompt .= "- {$urgenza} **{$sc['titolo']}**: " . formatDate($sc['data_scadenza']) .
                        " ({$sc['giorni']} giorni) - {$sc['tipo']}\n";
@@ -255,7 +255,7 @@ function buildPrompt(
     switch ($tipo) {
         case 'rischi':
             $prompt .= "## RICHIESTA\nAnalizza i rischi principali del progetto e proponi azioni preventive/correttive concrete. " .
-                       "Considera ritardi, scostamenti economici, scadenze critiche e milestone a rischio.";
+                       "Considera ritardi, scostamenti economici, pm_scadenze critiche e milestone a rischio.";
             break;
         case 'report':
             $prompt .= "## RICHIESTA\nGenera un report di avanzamento professionale pronto per essere presentato al RUP e alla Stazione Appaltante. " .
@@ -284,8 +284,8 @@ function buildPrompt(
 // ANALISI RULE-BASED (fallback senza Claude API)
 // =============================================================================
 function analisiRuleBased(
-    array $commessa, array $tasks, array $tasksRitardo,
-    array $sal, array $scadenze, array $spi, string $tipo
+    array $commessa, array $pm_tasks, array $tasksRitardo,
+    array $pm_sal, array $pm_scadenze, array $spi, string $tipo
 ): array {
 
     $report     = [];
@@ -295,7 +295,7 @@ function analisiRuleBased(
 
     $avanzamento = (float)$commessa['percentuale_avanzamento'];
     $ritardo     = (int)($commessa['scostamento_giorni'] ?? 0);
-    $tasksRitN   = (int)$tasks['in_ritardo'];
+    $tasksRitN   = (int)$pm_tasks['in_ritardo'];
     $spiVal      = $spi['spi'];
 
     // Valutazione livello critico
@@ -327,12 +327,12 @@ function analisiRuleBased(
         foreach (array_slice($tasksRitardo, 0, 5) as $t) {
             $report[] = "\n- _{$t['nome']}_: {$t['giorni_ritardo']} giorni di ritardo ({$t['percentuale_completamento']}% completato)";
         }
-        $rischi[] = ['tipo' => 'TASKS', 'descrizione' => "{$tasksRitN} tasks in ritardo impattano sul percorso critico.", 'livello' => $tasksRitN > 3 ? 'ALTO' : 'MEDIO'];
+        $rischi[] = ['tipo' => 'TASKS', 'descrizione' => "{$tasksRitN} pm_tasks in ritardo impattano sul percorso critico.", 'livello' => $tasksRitN > 3 ? 'ALTO' : 'MEDIO'];
     }
 
     // SAL
-    if (!empty($sal)) {
-        $ultimoSal = $sal[0];
+    if (!empty($pm_sal)) {
+        $ultimoSal = $pm_sal[0];
         $report[] = "\n\n**Contabilità Lavori:**\n";
         $report[] = "Ultimo SAL emesso: N.{$ultimoSal['numero_sal']} - Importo cumulato: " .
                     formatEuro((float)$ultimoSal['importo_cumulato']) .
@@ -340,14 +340,14 @@ function analisiRuleBased(
     }
 
     // Scadenze critiche
-    $scadenzeCrit = array_filter($scadenze, fn($s) => $s['giorni'] <= 7);
+    $scadenzeCrit = array_filter($pm_scadenze, fn($s) => $s['giorni'] <= 7);
     if (!empty($scadenzeCrit)) {
         $n = count($scadenzeCrit);
-        $report[] = "\n\n⚠️ **ATTENZIONE - {$n} scadenze critiche entro 7 giorni:**";
+        $report[] = "\n\n⚠️ **ATTENZIONE - {$n} pm_scadenze critiche entro 7 giorni:**";
         foreach ($scadenzeCrit as $sc) {
             $report[] = "\n- {$sc['titolo']} - Scade il " . formatDate($sc['data_scadenza']);
         }
-        $rischi[] = ['tipo' => 'SCADENZE', 'descrizione' => "{$n} scadenze entro 7 giorni richiedono azione immediata.", 'livello' => 'CRITICO'];
+        $rischi[] = ['tipo' => 'SCADENZE', 'descrizione' => "{$n} pm_scadenze entro 7 giorni richiedono azione immediata.", 'livello' => 'CRITICO'];
     }
 
     // Azioni correttive
@@ -362,11 +362,11 @@ function analisiRuleBased(
             $azioni[] = ['priorita' => 2, 'azione' => 'Valutare possibilità di lavorazioni in parallelo o straordinari per recuperare ritardo'];
         }
         if (!empty($scadenzeCrit)) {
-            $azioni[] = ['priorita' => 0, 'azione' => 'URGENTE: Gestire immediatamente le ' . count($scadenzeCrit) . ' scadenze critiche entro 7 giorni'];
+            $azioni[] = ['priorita' => 0, 'azione' => 'URGENTE: Gestire immediatamente le ' . count($scadenzeCrit) . ' pm_scadenze critiche entro 7 giorni'];
         }
         if ($ritardo > 30) {
             $azioni[] = ['priorita' => 2, 'azione' => 'Valutare la necessità di una proroga contrattuale secondo art. 120 D.Lgs. 36/2023'];
-            $azioni[] = ['priorita' => 3, 'azione' => 'Predisporre documentazione per giustificazione ritardo (cause di forza maggiore, varianti, ecc.)'];
+            $azioni[] = ['priorita' => 3, 'azione' => 'Predisporre documentazione per giustificazione ritardo (cause di forza maggiore, pm_varianti, ecc.)'];
         }
 
         foreach ($azioni as $a) {
@@ -406,7 +406,7 @@ function analisiRuleBased(
 // CALCOLO INDICI
 // =============================================================================
 
-function calcolaSPI(array $commessa, array $tasks): array
+function calcolaSPI(array $commessa, array $pm_tasks): array
 {
     // SPI = EV / PV (Earned Value / Planned Value)
     $avanzamento = (float)$commessa['percentuale_avanzamento'];
@@ -429,7 +429,7 @@ function calcolaSPI(array $commessa, array $tasks): array
 
     // CPI (Cost Performance Index) - semplificato senza actual cost
     $ultimoCumulato = Database::fetchValue(
-        'SELECT COALESCE(MAX(importo_cumulato), 0) FROM sal WHERE commessa_id = :id',
+        'SELECT COALESCE(MAX(importo_cumulato), 0) FROM pm_sal WHERE commessa_id = :id',
         [':id' => $commessa['id']]
     );
     $ac  = (float)$ultimoCumulato;

@@ -5,13 +5,13 @@
 define('APP_INIT', true);
 require_once __DIR__ . '/../php/bootstrap.php';
 Auth::require();
-if (!Auth::can('verbali.read')) {
+if (!Auth::can('pm_verbali.read')) {
     header('Location: ' . APP_URL . '/pages/dashboard.php');
     exit;
 }
 
 $pageTitle  = 'Verbali';
-$activeMenu = 'verbali';
+$activeMenu = 'pm_verbali';
 include __DIR__ . '/../components/header.php';
 include __DIR__ . '/../components/sidebar.php';
 ?>
@@ -29,7 +29,7 @@ include __DIR__ . '/../components/sidebar.php';
         </ol>
       </nav>
     </div>
-    <?php if (Auth::can('verbali.create')): ?>
+    <?php if (Auth::can('pm_verbali.create')): ?>
     <button class="btn btn-primary" id="btnNuovoVerbale">
       <i class="bi bi-journal-plus me-2"></i>Nuovo Verbale
     </button>
@@ -62,7 +62,7 @@ include __DIR__ . '/../components/sidebar.php';
         </div>
         <div class="col-6 col-md-3">
           <select class="form-select form-select-sm" id="filterCommessa">
-            <option value="">Tutte le commesse</option>
+            <option value="">Tutte le pm_commesse</option>
           </select>
         </div>
         <div class="col-6 col-md-auto">
@@ -75,7 +75,7 @@ include __DIR__ . '/../components/sidebar.php';
     </div>
   </div>
 
-  <!-- Lista verbali -->
+  <!-- Lista pm_verbali -->
   <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadSelectOptions() {
-    const res = await API.get('/api/commesse.php?per_page=200&sort_by=codice');
+    const res = await API.get('/api/pm_commesse.php?per_page=200&sort_by=codice');
     const list = res.data || [];
     [document.getElementById('filterCommessa'), document.getElementById('fVCommessa')].forEach(sel => {
         list.forEach(c => sel.insertAdjacentHTML('beforeend',
@@ -280,12 +280,12 @@ async function loadVerbali(page = 1) {
     });
 
     try {
-        const res = await API.get('/api/verbali.php?' + params.toString());
+        const res = await API.get('/api/pm_verbali.php?' + params.toString());
         renderTable(res.data || []);
         const meta = res.meta || {};
         renderPagination(meta.current_page || 1, meta.last_page || 1, 'paginazione', loadVerbali);
         document.getElementById('paginationInfo').textContent =
-            `${meta.from ?? 0}–${meta.to ?? 0} di ${meta.total ?? 0} verbali`;
+            `${meta.from ?? 0}–${meta.to ?? 0} di ${meta.total ?? 0} pm_verbali`;
     } catch(e) {
         document.getElementById('verbaliBody').innerHTML =
             `<tr><td colspan="8" class="text-danger text-center py-4">${escapeHtml(e.message)}</td></tr>`;
@@ -343,7 +343,7 @@ async function viewVerbale(id) {
     document.getElementById('viewVerbaleBody').innerHTML =
         '<div class="text-center py-4"><div class="spinner-border"></div></div>';
     try {
-        const res = await API.get('/api/verbali.php?id=' + id);
+        const res = await API.get('/api/pm_verbali.php?id=' + id);
         const v = res.data;
         document.getElementById('viewVerbaleTitle').textContent =
             `Verbale n. ${v.numero_verbale ?? '—'} — ${v.oggetto ?? ''}`;
@@ -390,7 +390,7 @@ async function openEdit(id) {
     const modal = new bootstrap.Modal(document.getElementById('verbaleModal'));
     modal.show();
     try {
-        const res = await API.get('/api/verbali.php?id=' + id);
+        const res = await API.get('/api/pm_verbali.php?id=' + id);
         const v = res.data;
         document.getElementById('verbaleId').value = v.id;
         const form = document.getElementById('verbaleForm');
@@ -410,10 +410,10 @@ async function salvaVerbale() {
     UI.showLoader();
     try {
         if (data.id) {
-            await API.put('/api/verbali.php', data);
+            await API.put('/api/pm_verbali.php', data);
             UI.success('Verbale aggiornato');
         } else {
-            await API.post('/api/verbali.php', data);
+            await API.post('/api/pm_verbali.php', data);
             UI.success('Verbale creato');
         }
         bootstrap.Modal.getInstance(document.getElementById('verbaleModal')).hide();
@@ -429,7 +429,7 @@ async function elimina(id, obj) {
     const ok = await UI.confirm(`Eliminare il verbale <strong>${escapeHtml(obj)}</strong>?`);
     if (!ok) return;
     try {
-        await API.delete('/api/verbali.php', { id });
+        await API.delete('/api/pm_verbali.php', { id });
         UI.success('Verbale eliminato');
         loadVerbali(currentPage);
     } catch(e) { UI.error(e.message); }

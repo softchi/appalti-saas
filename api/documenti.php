@@ -2,12 +2,12 @@
 /**
  * API REST: Gestione Documentale
  *
- * GET    /api/documenti.php?commessa_id=N   - Lista documenti
- * GET    /api/documenti.php?id=N            - Dettaglio documento
- * POST   /api/documenti.php                 - Upload documento (multipart)
- * PUT    /api/documenti.php?id=N            - Aggiorna metadati
- * DELETE /api/documenti.php?id=N            - Elimina documento
- * GET    /api/documenti.php?action=download&id=N - Download sicuro
+ * GET    /api/pm_documenti.php?commessa_id=N   - Lista pm_documenti
+ * GET    /api/pm_documenti.php?id=N            - Dettaglio documento
+ * POST   /api/pm_documenti.php                 - Upload documento (multipart)
+ * PUT    /api/pm_documenti.php?id=N            - Aggiorna metadati
+ * DELETE /api/pm_documenti.php?id=N            - Elimina documento
+ * GET    /api/pm_documenti.php?action=download&id=N - Download sicuro
  *
  * @version 1.0.0
  */
@@ -16,7 +16,7 @@ require_once __DIR__ . '/../php/bootstrap.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 if (!Auth::check()) jsonError('Non autenticato', 401);
-if (!Auth::can('documenti.read')) jsonError('Permesso negato', 403);
+if (!Auth::can('pm_documenti.read')) jsonError('Permesso negato', 403);
 
 $method     = strtoupper($_SERVER['REQUEST_METHOD']);
 $id         = sanitizeInt($_GET['id'] ?? null, 1);
@@ -34,21 +34,21 @@ switch ($method) {
         break;
 
     case 'POST':
-        if (!Auth::can('documenti.upload')) jsonError('Permesso negato', 403);
+        if (!Auth::can('pm_documenti.upload')) jsonError('Permesso negato', 403);
         Auth::requireCsrf();
         uploadDocumento();
         break;
 
     case 'PUT':
         if (!$id) jsonError('ID documento richiesto', 400);
-        if (!Auth::can('documenti.update')) jsonError('Permesso negato', 403);
+        if (!Auth::can('pm_documenti.update')) jsonError('Permesso negato', 403);
         Auth::requireCsrf();
         updateDocumento($id);
         break;
 
     case 'DELETE':
         if (!$id) jsonError('ID documento richiesto', 400);
-        if (!Auth::can('documenti.delete')) jsonError('Permesso negato', 403);
+        if (!Auth::can('pm_documenti.delete')) jsonError('Permesso negato', 403);
         Auth::requireCsrf();
         deleteDocumento($id);
         break;
@@ -70,9 +70,9 @@ function listDocumenti(int $commessaId): never
     $sql    = 'SELECT d.*,
                       cd.nome AS categoria_nome, cd.icona AS categoria_icona, cd.colore AS categoria_colore,
                       CONCAT(u.cognome, " ", u.nome) AS caricato_da
-               FROM documenti d
-               LEFT JOIN categorie_documento cd ON cd.id = d.categoria_id
-               JOIN utenti u ON u.id = d.uploaded_by
+               FROM pm_documenti d
+               LEFT JOIN pm_categorie_documento cd ON cd.id = d.categoria_id
+               JOIN pm_utenti u ON u.id = d.uploaded_by
                WHERE d.commessa_id = :cid AND d.doc_padre_id IS NULL';
     $params = [':cid' => $commessaId];
 
@@ -101,16 +101,16 @@ function listDocumenti(int $commessaId): never
         $doc['created_at_it']      = formatDateTime($doc['created_at']);
         $doc['data_documento_it']  = formatDate($doc['data_documento']);
         $doc['data_scadenza_it']   = formatDate($doc['data_scadenza']);
-        $doc['url_download']       = APP_URL . "/api/documenti.php?action=download&id={$doc['id']}";
+        $doc['url_download']       = APP_URL . "/api/pm_documenti.php?action=download&id={$doc['id']}";
         return $doc;
     }, $result['data']);
 
-    // Categorie con conteggio documenti
+    // Categorie con conteggio pm_documenti
     $categorie = Database::fetchAll(
         'SELECT cd.id, cd.codice, cd.nome, cd.icona, cd.colore,
                 COUNT(d.id) AS n_documenti
-         FROM categorie_documento cd
-         LEFT JOIN documenti d ON d.categoria_id = cd.id AND d.commessa_id = :cid AND d.stato = "PUBBLICATO"
+         FROM pm_categorie_documento cd
+         LEFT JOIN pm_documenti d ON d.categoria_id = cd.id AND d.commessa_id = :cid AND d.stato = "PUBBLICATO"
          GROUP BY cd.id
          ORDER BY cd.ordine',
         [':cid' => $commessaId]
@@ -125,9 +125,9 @@ function getDocumento(int $id): never
         'SELECT d.*,
                 cd.nome AS categoria_nome,
                 CONCAT(u.cognome, " ", u.nome) AS caricato_da
-         FROM documenti d
-         LEFT JOIN categorie_documento cd ON cd.id = d.categoria_id
-         JOIN utenti u ON u.id = d.uploaded_by
+         FROM pm_documenti d
+         LEFT JOIN pm_categorie_documento cd ON cd.id = d.categoria_id
+         JOIN pm_utenti u ON u.id = d.uploaded_by
          WHERE d.id = :id',
         [':id' => $id]
     );
@@ -138,14 +138,14 @@ function getDocumento(int $id): never
     $versioni = Database::fetchAll(
         'SELECT d.id, d.versione, d.nome_file, d.dimensione, d.created_at,
                 CONCAT(u.cognome, " ", u.nome) AS caricato_da
-         FROM documenti d
-         JOIN utenti u ON u.id = d.uploaded_by
+         FROM pm_documenti d
+         JOIN pm_utenti u ON u.id = d.uploaded_by
          WHERE d.doc_padre_id = :padre_id OR d.id = :id
          ORDER BY d.versione DESC',
         [':padre_id' => $id, ':id' => $id]
     );
 
-    $doc['url_download']    = APP_URL . "/api/documenti.php?action=download&id={$id}";
+    $doc['url_download']    = APP_URL . "/api/pm_documenti.php?action=download&id={$id}";
     $doc['dimensione_fmt']  = formatFileSize((int)$doc['dimensione']);
 
     jsonResponse(['documento' => $doc, 'versioni' => $versioni]);
@@ -163,11 +163,11 @@ function uploadDocumento(): never
       ->orFail();
 
     $commessaId = (int)$_POST['commessa_id'];
-    $commessa   = Database::fetchOne('SELECT id FROM commesse WHERE id = :id', [':id' => $commessaId]);
+    $commessa   = Database::fetchOne('SELECT id FROM pm_commesse WHERE id = :id', [':id' => $commessaId]);
     if (!$commessa) jsonError('Commessa non trovata', 404);
 
     // Upload file
-    $upload = uploadFile($_FILES['file'], 'documenti/' . $commessaId);
+    $upload = uploadFile($_FILES['file'], 'pm_documenti/' . $commessaId);
     if (!$upload['success']) {
         jsonError($upload['message'] ?? 'Errore upload', 422);
     }
@@ -178,24 +178,24 @@ function uploadDocumento(): never
 
     if ($docPadreId) {
         $padre = Database::fetchOne(
-            'SELECT id, versione FROM documenti WHERE id = :id',
+            'SELECT id, versione FROM pm_documenti WHERE id = :id',
             [':id' => $docPadreId]
         );
         if (!$padre) jsonError('Documento padre non trovato', 404);
 
         // Imposta documento precedente come OBSOLETO
-        Database::update('documenti', ['stato' => 'OBSOLETO'], ['id' => $docPadreId]);
+        Database::update('pm_documenti', ['stato' => 'OBSOLETO'], ['id' => $docPadreId]);
 
         // Calcola nuova versione
         $maxVer = Database::fetchValue(
-            'SELECT COALESCE(MAX(versione), 1) FROM documenti
+            'SELECT COALESCE(MAX(versione), 1) FROM pm_documenti
              WHERE doc_padre_id = :pid OR id = :id',
             [':pid' => $docPadreId, ':id' => $docPadreId]
         );
         $versione = (int)$maxVer + 1;
     }
 
-    $docId = Database::insert('documenti', [
+    $docId = Database::insert('pm_documenti', [
         'uuid'           => generateUUID(),
         'commessa_id'    => $commessaId,
         'categoria_id'   => sanitizeInt($_POST['categoria_id'] ?? null, 1) ?? null,
@@ -216,7 +216,7 @@ function uploadDocumento(): never
         'uploaded_by'    => Auth::id(),
     ]);
 
-    Logger::audit('UPLOAD', 'documenti', $docId, null, [
+    Logger::audit('UPLOAD', 'pm_documenti', $docId, null, [
         'titolo' => $_POST['titolo'], 'file' => $upload['name'], 'versione' => $versione
     ]);
 
@@ -224,7 +224,7 @@ function uploadDocumento(): never
         $commessaId, 'DOCUMENTO',
         'Nuovo documento caricato',
         'È stato caricato: ' . sanitizeString($_POST['titolo'], 100),
-        "/pages/documenti.php?commessa_id={$commessaId}"
+        "/pages/pm_documenti.php?commessa_id={$commessaId}"
     );
 
     jsonSuccess('Documento caricato con successo', [
@@ -236,7 +236,7 @@ function uploadDocumento(): never
 
 function updateDocumento(int $id): never
 {
-    $doc = Database::fetchOne('SELECT * FROM documenti WHERE id = :id', [':id' => $id]);
+    $doc = Database::fetchOne('SELECT * FROM pm_documenti WHERE id = :id', [':id' => $id]);
     if (!$doc) jsonError('Documento non trovato', 404);
 
     $body = !empty($_POST) ? $_POST : getJsonBody();
@@ -254,14 +254,14 @@ function updateDocumento(int $id): never
         };
     }
 
-    Database::update('documenti', $updateData, ['id' => $id]);
-    Logger::audit('UPDATE', 'documenti', $id, $doc, $updateData);
+    Database::update('pm_documenti', $updateData, ['id' => $id]);
+    Logger::audit('UPDATE', 'pm_documenti', $id, $doc, $updateData);
     jsonSuccess('Documento aggiornato');
 }
 
 function deleteDocumento(int $id): never
 {
-    $doc = Database::fetchOne('SELECT * FROM documenti WHERE id = :id', [':id' => $id]);
+    $doc = Database::fetchOne('SELECT * FROM pm_documenti WHERE id = :id', [':id' => $id]);
     if (!$doc) jsonError('Documento non trovato', 404);
 
     // Solo chi ha caricato o admin può eliminare
@@ -270,9 +270,9 @@ function deleteDocumento(int $id): never
     }
 
     // Soft delete
-    Database::update('documenti', ['stato' => 'ARCHIVIATO'], ['id' => $id]);
+    Database::update('pm_documenti', ['stato' => 'ARCHIVIATO'], ['id' => $id]);
 
-    Logger::audit('DELETE', 'documenti', $id, $doc, ['stato' => 'ARCHIVIATO']);
+    Logger::audit('DELETE', 'pm_documenti', $id, $doc, ['stato' => 'ARCHIVIATO']);
     jsonSuccess('Documento archiviato');
 }
 
@@ -281,7 +281,7 @@ function downloadDocumento(int $id): never
     header_remove('Content-Type');
 
     $doc = Database::fetchOne(
-        'SELECT * FROM documenti WHERE id = :id AND stato != "ARCHIVIATO"',
+        'SELECT * FROM pm_documenti WHERE id = :id AND stato != "ARCHIVIATO"',
         [':id' => $id]
     );
 
@@ -310,7 +310,7 @@ function downloadDocumento(int $id): never
     }
 
     // Log download
-    Logger::audit('DOWNLOAD', 'documenti', $id, null, ['file' => $doc['nome_file']]);
+    Logger::audit('DOWNLOAD', 'pm_documenti', $id, null, ['file' => $doc['nome_file']]);
 
     // Serve file
     $mimeType = $doc['mime_type'] ?: 'application/octet-stream';
