@@ -16,6 +16,21 @@ define('APP_VERSION',  '1.0.0');
 define('APP_NAME',     'Appalti Pubblici SaaS');
 define('APP_TAGLINE',  'Gestione Commesse Pubbliche - D.Lgs. 36/2023');
 // =============================================================================
+// CREDENZIALI E OVERRIDE LOCALI — caricato PRIMA di tutto il resto
+// File da creare manualmente su Altervista (NON in git):
+//   php/local_config.php
+// Contenuto minimo:
+//   <?php
+//   define('APP_URL_LOCAL', 'https://softchi.altervista.org/1_GestPM/v5/appalti-saas-main');
+//   define('DB_USER_LOCAL', 'softchi');
+//   define('DB_PASS_LOCAL', 'tua_password_db');
+// =============================================================================
+$_localCfg = __DIR__ . '/local_config.php';
+if (file_exists($_localCfg)) {
+    require_once $_localCfg;
+}
+unset($_localCfg);
+// =============================================================================
 // URL E PERCORSI
 // =============================================================================
 // ALTERVISTA FIX: il reverse proxy termina SSL prima di PHP,
@@ -26,17 +41,11 @@ $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
          || (int)($_SERVER['SERVER_PORT'] ?? 80) === 443
     ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-// APP_URL: può essere forzato in local_config.php con APP_URL_LOCAL (consigliato
-// su hosting condiviso dove DOCUMENT_ROOT o SCRIPT_NAME possono essere ambigui).
-// Altrimenti si calcola sottraendo DOCUMENT_ROOT dal path fisico dell'app.
+// APP_URL: se APP_URL_LOCAL è definito in local_config.php, usalo direttamente.
+// Altrimenti calcola sottraendo DOCUMENT_ROOT dal path fisico dell'app.
 if (defined('APP_URL_LOCAL')) {
     $basePath = rtrim(APP_URL_LOCAL, '/');
-    // Se APP_URL_LOCAL è un URL completo usalo direttamente, altrimenti aggiungi host
-    if (str_starts_with($basePath, 'http')) {
-        define('APP_URL', $basePath);
-    } else {
-        define('APP_URL', $protocol . '://' . $host . $basePath);
-    }
+    define('APP_URL', str_starts_with($basePath, 'http') ? $basePath : $protocol . '://' . $host . $basePath);
 } else {
     $_docRoot = rtrim(str_replace('\\', '/', $_SERVER['DOCUMENT_ROOT'] ?? ''), '/');
     $_appRoot = rtrim(str_replace('\\', '/', dirname(__DIR__)), '/');
@@ -52,18 +61,6 @@ define('API_PATH',        BASE_PATH . '/api');
 define('COMPONENTS_PATH', BASE_PATH . '/components');
 define('UPLOADS_PATH',    BASE_PATH . '/uploads');
 define('UPLOADS_URL',     APP_URL . '/uploads');
-// =============================================================================
-// CREDENZIALI LOCALI (file da creare manualmente su Altervista, NON in git)
-// Crea php/local_config.php con:
-//   <?php
-//   define('DB_USER_LOCAL', 'tuo_username_altervista');
-//   define('DB_PASS_LOCAL', 'tua_password_db');
-// =============================================================================
-$_localCfg = __DIR__ . '/local_config.php';
-if (file_exists($_localCfg)) {
-    require_once $_localCfg;
-}
-unset($_localCfg);
 // =============================================================================
 // DATABASE
 // FIX: rimosso define('DB_OPTIONS', [...]) con costanti PDO dentro define()
