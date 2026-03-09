@@ -18,7 +18,13 @@ define('APP_TAGLINE',  'Gestione Commesse Pubbliche - D.Lgs. 36/2023');
 // =============================================================================
 // URL E PERCORSI
 // =============================================================================
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+// ALTERVISTA FIX: il reverse proxy termina SSL prima di PHP,
+// quindi $_SERVER['HTTPS'] è vuoto anche su HTTPS.
+// Controlliamo anche HTTP_X_FORWARDED_PROTO (header standard dei reverse proxy).
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+         || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+         || (int)($_SERVER['SERVER_PORT'] ?? 80) === 443
+    ? 'https' : 'http';
 $host     = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $script   = dirname($_SERVER['SCRIPT_NAME'] ?? '');
 $basePath = rtrim($script, '/\\');

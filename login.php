@@ -249,7 +249,7 @@ $expired  = isset($_GET['session_expired']);
     setLoading(true);
 
     try {
-      const resp = await fetch('<?= e(APP_URL) ?>/api/login.php', {
+      const resp = await fetch('api/login.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
