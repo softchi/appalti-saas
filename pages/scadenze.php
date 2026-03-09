@@ -265,10 +265,10 @@ include __DIR__ . '/../components/sidebar.php';
 
 <?php
 $commessaIdFilter = sanitizeInt($_GET['commessa_id'] ?? null, 1);
-$inlineScript = <<<JS
+$inlineScript = <<<'JS'
 let currentPage = 1;
 let searchTimer = null;
-const PRESET_COMMESSA_ID = {$commessaIdFilter};
+const PRESET_COMMESSA_ID = __COMMESSA_ID__;
 
 document.addEventListener('DOMContentLoaded', () => {
     loadSelectOptions();
@@ -531,4 +531,5 @@ async function elimina(id, desc) {
     } catch(e) { UI.error(e.message); }
 }
 JS;
+$inlineScript = str_replace('__COMMESSA_ID__', $commessaIdFilter ?? 'null', $inlineScript);
 include __DIR__ . '/../components/footer.php';
