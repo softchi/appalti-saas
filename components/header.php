@@ -49,6 +49,7 @@ $scadenzeUrgenti = (int)Database::fetchValue(
   <meta name="csrf-token" content="<?= e(Auth::csrfToken()) ?>">
   <meta name="app-url" content="<?= e(APP_URL) ?>">
   <meta name="user-id" content="<?= e($user['id']) ?>">
+  <script>const APP_URL = '<?= e(APP_URL) ?>';</script>
 </head>
 <body>
 
