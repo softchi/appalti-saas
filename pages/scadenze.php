@@ -351,7 +351,7 @@ async function loadScadenze(page = 1) {
         document.getElementById('kpiTotale').textContent   = meta.total ?? '—';
 
         renderTable(list);
-        renderPagination(meta.current_page || 1, meta.last_page || 1, 'paginazione', loadScadenze);
+        renderPagination('paginazione', meta.current_page || 1, meta.last_page || 1, loadScadenze);
         document.getElementById('paginationInfo').textContent =
             `${meta.from ?? 0}–${meta.to ?? 0} di ${meta.total ?? 0} pm_scadenze`;
     } catch(e) {

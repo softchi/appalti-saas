@@ -220,7 +220,7 @@ async function loadUtenti(page = 1) {
         const res = await API.get('/api/pm_utenti.php?' + params.toString());
         renderTable(res.data || []);
         const meta = res.meta || {};
-        renderPagination(meta.current_page||1, meta.last_page||1, 'paginazione', loadUtenti);
+        renderPagination('paginazione', meta.current_page||1, meta.last_page||1, loadUtenti);
         document.getElementById('paginationInfo').textContent =
             `${meta.from??0}–${meta.to??0} di ${meta.total??0} pm_utenti`;
     } catch(e) {

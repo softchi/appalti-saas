@@ -506,7 +506,7 @@ async function loadCommesse(page = 1) {
         const res = await API.get('/api/commesse.php?' + params.toString());
         if (currentView === 'table') renderTable(res.data || []);
         else renderGrid(res.data || []);
-        renderPagination(res.page || 1, res.pages || 1, 'paginazione', loadCommesse);
+        renderPagination('paginazione', res.page || 1, res.pages || 1, loadCommesse);
         const _from = (res.total ?? 0) > 0 ? ((res.page - 1) * res.perPage + 1) : 0;
         const _to   = Math.min(res.page * res.perPage, res.total ?? 0);
         document.getElementById('paginationInfo').textContent =

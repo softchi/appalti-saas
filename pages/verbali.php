@@ -283,7 +283,7 @@ async function loadVerbali(page = 1) {
         const res = await API.get('/api/pm_verbali.php?' + params.toString());
         renderTable(res.data || []);
         const meta = res.meta || {};
-        renderPagination(meta.current_page || 1, meta.last_page || 1, 'paginazione', loadVerbali);
+        renderPagination('paginazione', meta.current_page || 1, meta.last_page || 1, loadVerbali);
         document.getElementById('paginationInfo').textContent =
             `${meta.from ?? 0}–${meta.to ?? 0} di ${meta.total ?? 0} pm_verbali`;
     } catch(e) {
