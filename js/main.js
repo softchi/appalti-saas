@@ -237,6 +237,8 @@ function escapeHtml(str) {
    PAGINAZIONE
 ============================================================================= */
 function renderPagination(container, currentPage, totalPages, onPageChange) {
+  if (typeof container === 'string') container = document.getElementById(container);
+  if (!container) return;
   if (totalPages <= 1) { container.innerHTML = ''; return; }
 
   let html = '<nav><ul class="pagination pagination-sm mb-0">';
